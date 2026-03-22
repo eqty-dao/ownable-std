@@ -263,6 +263,135 @@ impl Querier for EmptyQuerier {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // rgb_hex
+
+    #[test]
+    fn rgb_hex_formats_correctly() {
+        assert_eq!(rgb_hex(0, 0, 0), "#000000");
+        assert_eq!(rgb_hex(255, 255, 255), "#FFFFFF");
+        assert_eq!(rgb_hex(255, 0, 0), "#FF0000");
+        assert_eq!(rgb_hex(0, 128, 255), "#0080FF");
+    }
+
+    // derive_rgb_values
+
+    #[test]
+    fn derive_rgb_values_reads_last_three_bytes_reversed() {
+        // bytes: [0x01, 0x02, 0x03] → reversed → [0x03, 0x02, 0x01] → r=3, g=2, b=1
+        assert_eq!(derive_rgb_values("010203".to_string()), (3, 2, 1));
+    }
+
+    #[test]
+    fn derive_rgb_values_strips_0x_prefix() {
+        assert_eq!(
+            derive_rgb_values("0x010203".to_string()),
+            derive_rgb_values("010203".to_string())
+        );
+    }
+
+    #[test]
+    fn derive_rgb_values_pads_odd_length_input() {
+        // "abc" → padded to "0abc" → bytes [0x0a, 0xbc] → reversed [0xbc, 0x0a]
+        assert_eq!(derive_rgb_values("abc".to_string()), (0xbc, 0x0a, 0));
+    }
+
+    #[test]
+    fn derive_rgb_values_returns_zeros_for_invalid_hex() {
+        assert_eq!(derive_rgb_values("xyz".to_string()), (0, 0, 0));
+    }
+
+    #[test]
+    fn derive_rgb_values_returns_zeros_for_empty_input() {
+        assert_eq!(derive_rgb_values("".to_string()), (0, 0, 0));
+    }
+
+    #[test]
+    fn derive_rgb_values_uses_last_three_bytes_of_long_input() {
+        // 8 bytes: [0xaa, 0xbb, 0xcc, 0xdd, 0x11, 0x22, 0x33, 0x44]
+        // reversed: [0x44, 0x33, 0x22, 0x11, 0xdd, 0xcc, 0xbb, 0xaa]
+        // r=0x44, g=0x33, b=0x22
+        assert_eq!(
+            derive_rgb_values("aabbccdd11223344".to_string()),
+            (0x44, 0x33, 0x22)
+        );
+    }
+
+    // get_random_color
+
+    #[test]
+    fn get_random_color_returns_hash_prefixed_hex() {
+        let color = get_random_color("010203".to_string());
+        assert!(color.starts_with('#'));
+        assert_eq!(color.len(), 7);
+    }
+
+    #[test]
+    fn get_random_color_is_deterministic() {
+        let hash = "deadbeef".to_string();
+        assert_eq!(get_random_color(hash.clone()), get_random_color(hash));
+    }
+
+    // IdbStateDump / IdbStorage round-trip
+
+    #[test]
+    fn idb_state_dump_round_trips_through_storage() {
+        let mut storage = MemoryStorage::new();
+        storage.set(b"key1", b"value1");
+        storage.set(b"key2", b"value2");
+
+        let dump = IdbStateDump::from(storage);
+        assert_eq!(dump.state_dump.get(b"key1".as_ref()), Some(&b"value1".to_vec()));
+        assert_eq!(dump.state_dump.get(b"key2".as_ref()), Some(&b"value2".to_vec()));
+    }
+
+    #[test]
+    fn idb_storage_load_restores_all_keys() {
+        let mut storage = MemoryStorage::new();
+        storage.set(b"foo", b"bar");
+        storage.set(b"baz", b"qux");
+
+        let dump = IdbStateDump::from(storage);
+        let loaded = IdbStorage::load(dump);
+
+        assert_eq!(loaded.storage.get(b"foo"), Some(b"bar".to_vec()));
+        assert_eq!(loaded.storage.get(b"baz"), Some(b"qux".to_vec()));
+    }
+
+    #[test]
+    fn idb_state_dump_empty_storage_produces_empty_map() {
+        let storage = MemoryStorage::new();
+        let dump = IdbStateDump::from(storage);
+        assert!(dump.state_dump.is_empty());
+    }
+
+    // create_ownable_env
+
+    #[test]
+    fn create_env_produces_default_env() {
+        let env = create_env();
+        assert_eq!(env.block.height, 0);
+        assert_eq!(env.block.chain_id, "");
+    }
+
+    #[test]
+    fn create_ownable_env_sets_chain_id() {
+        let env = create_ownable_env("my-chain", None);
+        assert_eq!(env.block.chain_id, "my-chain");
+    }
+
+    #[test]
+    fn create_ownable_env_sets_timestamp() {
+        use cosmwasm_std::Timestamp;
+        let ts = Timestamp::from_seconds(12345);
+        let env = create_ownable_env("", Some(ts));
+        assert_eq!(env.block.time, ts);
+    }
+}
+
 // from github.com/CosmWasm/cw-nfts/blob/main/contracts/cw721-metadata-onchain
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
 pub struct Metadata {
