@@ -269,6 +269,41 @@ pub fn ownables_query_locked(metadata: TokenStream, input: TokenStream) -> Token
     quote! { #input_ast }.into()
 }
 
+/// adds IsConsumed {} variant to QueryMsg
+#[proc_macro_attribute]
+pub fn ownables_query_consumed(metadata: TokenStream, input: TokenStream) -> TokenStream {
+
+    // validate no input args
+    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
+    if let Some(arg) = meta_ast.first() {
+        return syn::Error::new_spanned(arg, "no args expected")
+            .to_compile_error()
+            .into();
+    }
+
+    let default_query_variants: TokenStream = quote! {
+        enum QueryMsg {
+            IsConsumed {},
+        }
+    }
+        .into();
+    let default_ast: DeriveInput = parse_macro_input!(default_query_variants);
+    let default_variants = match default_ast.data {
+        Enum(DataEnum { variants, .. }) => variants,
+        _ => panic!("only enums can provide variants"),
+    };
+
+    let mut input_ast: DeriveInput = parse_macro_input!(input);
+    let input_variants_data = match &mut input_ast.data {
+        Enum(DataEnum { variants, .. }) => variants,
+        _ => panic!("only enums can accept variants")
+    };
+
+    input_variants_data.extend(default_variants.into_iter());
+
+    quote! { #input_ast }.into()
+}
+
 /// adds IsConsumerOf { issuer: Addr, consumable_type: String, } variant to QueryMsg
 #[proc_macro_attribute]
 pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> TokenStream {
