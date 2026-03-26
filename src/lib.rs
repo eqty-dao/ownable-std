@@ -27,6 +27,24 @@ pub fn create_ownable_env(chain_id: impl Into<String>, time: Option<Timestamp>) 
     }
 }
 
+/// convert an ownable package name into a display title
+/// e.g. `ownable-my-first` -> `My First`
+pub fn package_title_from_name(name: &str) -> String {
+    name
+        .trim_start_matches("ownable-")
+        .split(['-', '_'])
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            let mut chars = part.chars();
+            match chars.next() {
+                Some(first) => format!("{}{}", first.to_ascii_uppercase(), chars.as_str()),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 pub fn load_owned_deps(state_dump: Option<IdbStateDump>) -> OwnedDeps<MemoryStorage, EmptyApi, EmptyQuerier, Empty> {
     match state_dump {
         None => OwnedDeps {
