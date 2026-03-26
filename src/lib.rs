@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api, BlockInfo, CanonicalAddr, ContractInfo, Empty, Env, MemoryStorage, OwnedDeps, Querier, RecoverPubkeyError, StdError, StdResult, Timestamp, VerificationError, Order, Storage, Uint128, Response};
+use cosmwasm_std::{Addr, Api, BlockInfo, CanonicalAddr, ContractInfo, Empty, Env, OwnedDeps, Querier, RecoverPubkeyError, StdError, StdResult, Timestamp, VerificationError, Order, Storage, Uint128, Response};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string;
@@ -6,6 +6,9 @@ use serde_with::serde_as;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use wasm_bindgen::{JsValue, JsError};
+
+mod memory_storage;
+pub use memory_storage::MemoryStorage;
 
 const CANONICAL_LENGTH: usize = 54;
 
@@ -184,12 +187,12 @@ impl Api for EmptyApi {
     fn addr_canonicalize(&self, human: &str) -> StdResult<CanonicalAddr> {
         // Dummy input validation. This is more sophisticated for formats like bech32, where format and checksum are validated.
         if human.len() < 3 {
-            return Err(StdError::generic_err(
+            return Err(StdError::msg(
                 "Invalid input: human address too short",
             ));
         }
         if human.len() > self.canonical_length {
-            return Err(StdError::generic_err(
+            return Err(StdError::msg(
                 "Invalid input: human address too long",
             ));
         }
@@ -210,7 +213,7 @@ impl Api for EmptyApi {
 
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
         if canonical.len() != self.canonical_length {
-            return Err(StdError::generic_err(
+            return Err(StdError::msg(
                 "Invalid input: canonical address length not correct",
             ));
         }
