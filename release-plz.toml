@@ -1,0 +1,5 @@
+[workspace]
+# Only prepare releases when at least one commit message matches these conventional commits.
+release_commits = "^(feat|fix)(\\(.+\\))?(!)?:"
+# Keep semantic-release-like behavior for feature commits on 0.x versions.
+features_always_increment_minor = true
