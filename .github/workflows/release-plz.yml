@@ -4,11 +4,20 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   release-plz-release:
     name: Release-plz release
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release-plz-')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -32,6 +41,7 @@ jobs:
 
   release-plz-pr:
     name: Release-plz PR
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
