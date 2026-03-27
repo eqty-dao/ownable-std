@@ -5,7 +5,7 @@ use std::panic::UnwindSafe;
 pub const HOST_ABI_VERSION: &str = "1";
 pub const HOST_ABI_MANIFEST_FIELD: &str = "ownablesAbi";
 pub const ERR_INVALID_POINTER: &str = "INVALID_POINTER";
-pub const ERR_INVALID_JSON: &str = "INVALID_JSON";
+pub const ERR_INVALID_CBOR: &str = "INVALID_CBOR";
 pub const ERR_SERIALIZATION_FAILED: &str = "SERIALIZATION_FAILED";
 pub const ERR_HANDLER_PANIC: &str = "HANDLER_PANIC";
 
@@ -47,9 +47,9 @@ impl From<&str> for HostAbiError {
     }
 }
 
-impl From<serde_json::Error> for HostAbiError {
-    fn from(value: serde_json::Error) -> Self {
-        Self::with_code(ERR_INVALID_JSON, value.to_string())
+impl From<serde_cbor::Error> for HostAbiError {
+    fn from(value: serde_cbor::Error) -> Self {
+        Self::with_code(ERR_INVALID_CBOR, value.to_string())
     }
 }
 
@@ -161,14 +161,12 @@ pub fn write_memory(data: &[u8]) -> u64 {
 }
 
 pub fn encode_response(response: &HostAbiResponse) -> u64 {
-    let encoded = serde_json::to_vec(response).unwrap_or_else(|error| {
+    let encoded = serde_cbor::to_vec(response).unwrap_or_else(|error| {
         let fallback = HostAbiResponse::err(HostAbiError::with_code(
             ERR_SERIALIZATION_FAILED,
             error.to_string(),
         ));
-        serde_json::to_vec(&fallback).unwrap_or_else(|_| {
-            b"{\"success\":false,\"error_code\":\"SERIALIZATION_FAILED\",\"error_message\":\"failed to encode response\"}".to_vec()
-        })
+        serde_cbor::to_vec(&fallback).unwrap_or_else(|_| Vec::new())
     });
     write_memory(&encoded)
 }
@@ -256,24 +254,26 @@ mod tests {
     #[test]
     fn response_serializes_error_fields() {
         let response = HostAbiResponse::err(HostAbiError::with_code("E", "failed"));
-        let encoded = serde_json::to_string(&response).expect("serialize");
-        assert!(encoded.contains("\"success\":false"));
-        assert!(encoded.contains("\"error_code\":\"E\""));
-        assert!(encoded.contains("\"error_message\":\"failed\""));
+        let encoded = serde_cbor::to_vec(&response).expect("serialize");
+        let decoded: HostAbiResponse = serde_cbor::from_slice(&encoded).expect("deserialize");
+        assert!(!decoded.success);
+        assert_eq!(decoded.error_code.as_deref(), Some("E"));
+        assert_eq!(decoded.error_message.as_deref(), Some("failed"));
     }
 
     #[test]
     fn response_omits_empty_payload() {
         let response = HostAbiResponse::err("boom");
-        let encoded = serde_json::to_string(&response).expect("serialize");
-        assert!(!encoded.contains("\"payload\""));
+        let encoded = serde_cbor::to_vec(&response).expect("serialize");
+        let decoded: HostAbiResponse = serde_cbor::from_slice(&encoded).expect("deserialize");
+        assert!(decoded.payload.is_empty());
     }
 
     #[test]
-    fn serde_json_error_maps_to_invalid_json_code() {
-        let err = serde_json::from_slice::<serde_json::Value>(b"\xff").expect_err("invalid");
+    fn serde_cbor_error_maps_to_invalid_cbor_code() {
+        let err = serde_cbor::from_slice::<HostAbiResponse>(b"\xff").expect_err("invalid");
         let abi_err: HostAbiError = err.into();
-        assert_eq!(abi_err.code.as_deref(), Some(ERR_INVALID_JSON));
+        assert_eq!(abi_err.code.as_deref(), Some(ERR_INVALID_CBOR));
     }
 
     #[test]

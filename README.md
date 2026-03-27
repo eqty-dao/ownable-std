@@ -50,49 +50,41 @@ Return strategy:
 - high 32 bits = output length
 
 Wire format:
-- input: UTF-8 JSON bytes
-- output: UTF-8 JSON envelope bytes
+- input: CBOR bytes
+- output: CBOR envelope bytes
 
 ### Request Schemas (Per Call)
 
 At the ABI transport layer, all four calls use the same schema:
-- `instantiate`: JSON document bytes
-- `execute`: JSON document bytes
-- `query`: JSON document bytes
-- `external_event`: JSON document bytes
+- `instantiate`: CBOR document bytes
+- `execute`: CBOR document bytes
+- `query`: CBOR document bytes
+- `external_event`: CBOR document bytes
 
 Required ABI-level keys:
 - none (the full request shape is contract-defined)
 
 Recommended convention for cross-contract consistency:
 
-```json
+```text
 {
-  "abi_version": "1",
-  "payload": {}
+  abi_version: "1",
+  payload: <contract-defined value>
 }
 ```
 
 If you use the convention above:
 - `abi_version`: required string, must be `"1"`
-- `payload`: required JSON value/object defined by your contract
+- `payload`: required contract-defined CBOR value
 
-Response envelope schema:
+Response envelope schema (decoded structure):
 
-```json
+```text
 {
-  "success": true,
-  "payload": [123, 34, 111, 107, 34, 58, 116, 114, 117, 101, 125]
-}
-```
-
-Error envelope example:
-
-```json
-{
-  "success": false,
-  "error_code": "SOME_CODE",
-  "error_message": "Human readable message"
+  success: bool,
+  payload: bytes,
+  error_code: string | null,
+  error_message: string | null
 }
 ```
 
@@ -103,27 +95,25 @@ Use the `ownable_host_abi_v1!` macro to export all required ABI symbols.
 ```rust
 use ownable_std::abi::HostAbiError;
 use ownable_std::ownable_host_abi_v1;
-use serde_json::json;
 
 fn instantiate_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
-    // Parse your request bytes, execute logic, return response bytes.
-    let v: serde_json::Value = serde_json::from_slice(input)?;
-    Ok(serde_json::to_vec(&json!({ "kind": "instantiate", "input": v }))?)
+    let v: serde_cbor::Value = serde_cbor::from_slice(input)?;
+    serde_cbor::to_vec(&v).map_err(HostAbiError::from)
 }
 
 fn execute_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
-    let v: serde_json::Value = serde_json::from_slice(input)?;
-    Ok(serde_json::to_vec(&json!({ "kind": "execute", "input": v }))?)
+    let v: serde_cbor::Value = serde_cbor::from_slice(input)?;
+    serde_cbor::to_vec(&v).map_err(HostAbiError::from)
 }
 
 fn query_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
-    let v: serde_json::Value = serde_json::from_slice(input)?;
-    Ok(serde_json::to_vec(&json!({ "kind": "query", "input": v }))?)
+    let v: serde_cbor::Value = serde_cbor::from_slice(input)?;
+    serde_cbor::to_vec(&v).map_err(HostAbiError::from)
 }
 
 fn external_event_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
-    let v: serde_json::Value = serde_json::from_slice(input)?;
-    Ok(serde_json::to_vec(&json!({ "kind": "external_event", "input": v }))?)
+    let v: serde_cbor::Value = serde_cbor::from_slice(input)?;
+    serde_cbor::to_vec(&v).map_err(HostAbiError::from)
 }
 
 ownable_host_abi_v1!(
@@ -145,13 +135,13 @@ where
 ## Host Runtime Call Flow
 
 For each call (`instantiate`, `execute`, `query`, `external_event`):
-1. Serialize request object to UTF-8 JSON bytes.
+1. Serialize request object to CBOR bytes.
 2. Call `ownable_alloc(len)`.
 3. Write bytes into wasm memory at the returned pointer.
 4. Call the selected `ownable_*` entrypoint with `(ptr, len)`.
 5. Unpack `(out_ptr, out_len)` from returned `u64`.
 6. Read `out_len` bytes at `out_ptr`.
-7. Parse JSON envelope and check `success`.
+7. Parse CBOR envelope and check `success`.
 8. Call `ownable_free(out_ptr, out_len)`.
 
 ### Memory Ownership Rules
@@ -169,7 +159,7 @@ For each call (`instantiate`, `execute`, `query`, `external_event`):
 
 Current ABI-level `error_code` values:
 - `INVALID_POINTER`: null pointer with non-zero length input
-- `INVALID_JSON`: request bytes failed JSON parsing in contract handler
+- `INVALID_CBOR`: request bytes failed CBOR parsing in contract handler
 - `SERIALIZATION_FAILED`: ABI envelope serialization failed
 - `HANDLER_PANIC`: contract handler panicked; panic is converted to structured error
 
@@ -180,8 +170,8 @@ Handlers may return additional domain-specific error codes via `HostAbiError::wi
 Non-UTF8 input must not panic.
 
 Expected behavior:
-- handler JSON parse fails (`serde_json::from_slice`)
-- error is mapped to structured ABI error envelope (`success=false`, `error_code=INVALID_JSON`)
+- handler CBOR parse fails (`serde_cbor::from_slice`)
+- error is mapped to structured ABI error envelope (`success=false`, `error_code=INVALID_CBOR`)
 
 ## Building Ownables Without `wasm_bindgen`
 
@@ -208,18 +198,18 @@ fn instantiate_handler(input: &[u8]) -> Result<Vec<u8>, ownable_std::abi::HostAb
 }
 ```
 
-Host request bytes (UTF-8 JSON):
+Host request bytes (CBOR, decoded form shown):
 
-```json
-{"ping":"pong"}
+```text
+{ ping: "pong" }
 ```
 
-Expected output envelope bytes decode to:
+Expected output envelope bytes decode to the same payload bytes.
 
-```json
+```text
 {
-  "success": true,
-  "payload": [123,34,112,105,110,103,34,58,34,112,111,110,103,34,125]
+  success: true,
+  payload: <CBOR bytes for { ping: "pong" }>
 }
 ```
 
