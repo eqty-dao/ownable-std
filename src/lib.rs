@@ -9,6 +9,8 @@ use wasm_bindgen::{JsValue, JsError};
 
 mod memory_storage;
 pub use memory_storage::MemoryStorage;
+#[cfg(feature = "macros")]
+pub use ownable_std_macros::*;
 
 const CANONICAL_LENGTH: usize = 54;
 
