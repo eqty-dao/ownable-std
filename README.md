@@ -35,6 +35,8 @@ ownable-std = { version = "0.4.0", default-features = false }
 Constants:
 - `ownable_std::abi::HOST_ABI_VERSION` = `"1"`
 - `ownable_std::abi::HOST_ABI_MANIFEST_FIELD` = `"ownablesAbi"`
+- `ownable_std::abi::HOST_ABI_WIRE_FORMAT` = `"cbor"`
+- `ownable_std::abi::HOST_ABI_WIRE_FORMAT_MANIFEST_FIELD` = `"wireFormat"`
 
 Stable exports:
 - `ownable_alloc(len: u32) -> u32`
@@ -222,6 +224,7 @@ Expected output envelope bytes decode to the same payload bytes.
 
 ## Versioning Guidance
 
-- set your package manifest field `ownablesAbi` to `"1"` when using this ABI
+- set your package manifest field `ownablesAbi` to `"1"` for exported symbol/signature ABI compatibility
+- set your package manifest field `wireFormat` to `"cbor"` for payload envelope encoding compatibility
 - host/runtime should reject incompatible versions
 - non-interface dependency changes should not require runtime changes if ABI version stays the same

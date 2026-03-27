@@ -4,6 +4,8 @@ use std::panic::UnwindSafe;
 
 pub const HOST_ABI_VERSION: &str = "1";
 pub const HOST_ABI_MANIFEST_FIELD: &str = "ownablesAbi";
+pub const HOST_ABI_WIRE_FORMAT: &str = "cbor";
+pub const HOST_ABI_WIRE_FORMAT_MANIFEST_FIELD: &str = "wireFormat";
 pub const ERR_INVALID_POINTER: &str = "INVALID_POINTER";
 pub const ERR_INVALID_CBOR: &str = "INVALID_CBOR";
 pub const ERR_SERIALIZATION_FAILED: &str = "SERIALIZATION_FAILED";
