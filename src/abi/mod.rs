@@ -1,8 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::panic::UnwindSafe;
 
 pub const HOST_ABI_VERSION: &str = "1";
 pub const HOST_ABI_MANIFEST_FIELD: &str = "ownablesAbi";
+pub const ERR_INVALID_POINTER: &str = "INVALID_POINTER";
+pub const ERR_INVALID_JSON: &str = "INVALID_JSON";
+pub const ERR_SERIALIZATION_FAILED: &str = "SERIALIZATION_FAILED";
+pub const ERR_HANDLER_PANIC: &str = "HANDLER_PANIC";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct HostAbiError {
@@ -44,7 +49,7 @@ impl From<&str> for HostAbiError {
 
 impl From<serde_json::Error> for HostAbiError {
     fn from(value: serde_json::Error) -> Self {
-        Self::new(value.to_string())
+        Self::with_code(ERR_INVALID_JSON, value.to_string())
     }
 }
 
@@ -127,7 +132,7 @@ pub fn read_memory(ptr: u32, len: u32) -> Result<Vec<u8>, HostAbiError> {
     }
     if ptr == 0 {
         return Err(HostAbiError::with_code(
-            "INVALID_POINTER",
+            ERR_INVALID_POINTER,
             "received null pointer for non-empty input",
         ));
     }
@@ -158,7 +163,7 @@ pub fn write_memory(data: &[u8]) -> u64 {
 pub fn encode_response(response: &HostAbiResponse) -> u64 {
     let encoded = serde_json::to_vec(response).unwrap_or_else(|error| {
         let fallback = HostAbiResponse::err(HostAbiError::with_code(
-            "SERIALIZATION_FAILED",
+            ERR_SERIALIZATION_FAILED,
             error.to_string(),
         ));
         serde_json::to_vec(&fallback).unwrap_or_else(|_| {
@@ -171,17 +176,30 @@ pub fn encode_response(response: &HostAbiResponse) -> u64 {
 pub fn dispatch<E, F>(ptr: u32, len: u32, handler: F) -> u64
 where
     E: Into<HostAbiError>,
-    F: FnOnce(&[u8]) -> Result<Vec<u8>, E>,
+    F: FnOnce(&[u8]) -> Result<Vec<u8>, E> + UnwindSafe,
 {
-    let response = match read_memory(ptr, len) {
-        Ok(input) => match handler(&input) {
-            Ok(payload) => HostAbiResponse::ok(payload),
-            Err(error) => HostAbiResponse::err(error.into()),
+    let response = dispatch_response(read_memory(ptr, len), handler);
+    encode_response(&response)
+}
+
+pub fn dispatch_response<E, F>(input: Result<Vec<u8>, HostAbiError>, handler: F) -> HostAbiResponse
+where
+    E: Into<HostAbiError>,
+    F: FnOnce(&[u8]) -> Result<Vec<u8>, E> + UnwindSafe,
+{
+    match input {
+        Ok(input) => match std::panic::catch_unwind(|| handler(&input)) {
+            Ok(handler_result) => match handler_result {
+                Ok(payload) => HostAbiResponse::ok(payload),
+                Err(error) => HostAbiResponse::err(error.into()),
+            },
+            Err(_) => HostAbiResponse::err(HostAbiError::with_code(
+                ERR_HANDLER_PANIC,
+                "handler panicked",
+            )),
         },
         Err(error) => HostAbiResponse::err(error),
-    };
-
-    encode_response(&response)
+    }
 }
 
 #[macro_export]
@@ -249,5 +267,25 @@ mod tests {
         let response = HostAbiResponse::err("boom");
         let encoded = serde_json::to_string(&response).expect("serialize");
         assert!(!encoded.contains("\"payload\""));
+    }
+
+    #[test]
+    fn serde_json_error_maps_to_invalid_json_code() {
+        let err = serde_json::from_slice::<serde_json::Value>(b"\xff").expect_err("invalid");
+        let abi_err: HostAbiError = err.into();
+        assert_eq!(abi_err.code.as_deref(), Some(ERR_INVALID_JSON));
+    }
+
+    #[test]
+    fn dispatch_converts_panic_into_structured_error() {
+        let response = dispatch_response::<HostAbiError, _>(
+            Ok(Vec::new()),
+            |_| -> Result<Vec<u8>, HostAbiError> {
+                panic!("boom");
+            },
+        );
+        assert!(!response.success);
+        assert_eq!(response.error_code.as_deref(), Some(ERR_HANDLER_PANIC));
+        assert_eq!(response.error_message.as_deref(), Some("handler panicked"));
     }
 }
