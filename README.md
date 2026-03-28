@@ -30,6 +30,8 @@ ownable-std = "0.4.0"
 ownable-std = { version = "0.4.0", default-features = false }
 ```
 
+`ownable-std` has no `wasm-bindgen` or `js-sys` dependency in runtime contract usage.
+
 ## Host ABI v1
 
 Constants:

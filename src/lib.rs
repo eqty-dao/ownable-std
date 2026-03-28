@@ -1,15 +1,12 @@
 use cosmwasm_std::{
     Addr, Api, BlockInfo, CanonicalAddr, ContractInfo, Empty, Env, Order, OwnedDeps, Querier,
-    RecoverPubkeyError, Response, StdError, StdResult, Storage, Timestamp, Uint128,
-    VerificationError,
+    RecoverPubkeyError, StdError, StdResult, Storage, Timestamp, Uint128, VerificationError,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::to_string;
 use serde_with::serde_as;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use wasm_bindgen::{JsError, JsValue};
 
 pub mod abi;
 mod memory_storage;
@@ -106,21 +103,6 @@ pub fn derive_rgb_values(hash: String) -> (u8, u8, u8) {
 /// and returns a hex string
 pub fn rgb_hex(r: u8, g: u8, b: u8) -> String {
     format!("#{:02X}{:02X}{:02X}", r, g, b)
-}
-
-/// takes a cw MemoryStorage and Response and returns a JsValue
-/// response that contains the memory state dump and response
-/// result
-pub fn get_json_response(storage: MemoryStorage, response: Response) -> Result<JsValue, JsError> {
-    let state_dump = IdbStateDump::from(storage);
-    let ownable_state = to_string(&response)?;
-    let response_map = js_sys::Map::new();
-    response_map.set(
-        &JsValue::from_str("mem"),
-        &JsValue::from(to_string(&state_dump)?),
-    );
-    response_map.set(&JsValue::from_str("result"), &JsValue::from(ownable_state));
-    Ok(JsValue::from(response_map))
 }
 
 pub struct IdbStorage {
