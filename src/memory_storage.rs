@@ -5,11 +5,13 @@ use std::iter;
 use std::ops::{Bound, RangeBounds};
 
 #[derive(Default)]
+/// In-memory [`Storage`] implementation used for tests and host-side execution.
 pub struct MemoryStorage {
     data: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
 impl MemoryStorage {
+    /// Creates an empty in-memory storage backend.
     pub fn new() -> Self {
         Self::default()
     }
