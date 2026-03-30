@@ -1,18 +1,17 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, Data::{Enum, Struct}, DataEnum, DataStruct, DeriveInput, FieldsNamed};
+use syn::{
+    parse::Nothing,
+    parse_macro_input,
+    Data::{Enum, Struct},
+    DataEnum, DataStruct, DeriveInput, FieldsNamed,
+};
 
 /// adds Transfer { to: Addr } variant to ExecuteMsg
 #[proc_macro_attribute]
 pub fn ownables_transfer(metadata: TokenStream, input: TokenStream) -> TokenStream {
-
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     // define the variants to be inserted and parse into DataEnum
     let default_execute_variants: TokenStream = quote! {
@@ -31,7 +30,7 @@ pub fn ownables_transfer(metadata: TokenStream, input: TokenStream) -> TokenStre
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_variants_data = match &mut input_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
-        _ => panic!("only enums can accept variants")
+        _ => panic!("only enums can accept variants"),
     };
 
     // insert variants from the default to input
@@ -43,14 +42,8 @@ pub fn ownables_transfer(metadata: TokenStream, input: TokenStream) -> TokenStre
 /// adds Lock {} variant to ExecuteMsg
 #[proc_macro_attribute]
 pub fn ownables_lock(metadata: TokenStream, input: TokenStream) -> TokenStream {
-
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     // define the variants to be inserted and parse into DataEnum
     let default_execute_variants: TokenStream = quote! {
@@ -58,7 +51,7 @@ pub fn ownables_lock(metadata: TokenStream, input: TokenStream) -> TokenStream {
             Lock {},
         }
     }
-        .into();
+    .into();
     let default_ast: DeriveInput = parse_macro_input!(default_execute_variants);
     let default_variants = match default_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
@@ -69,7 +62,7 @@ pub fn ownables_lock(metadata: TokenStream, input: TokenStream) -> TokenStream {
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_variants_data = match &mut input_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
-        _ => panic!("only enums can accept variants")
+        _ => panic!("only enums can accept variants"),
     };
 
     // insert variants from the default to input
@@ -81,14 +74,8 @@ pub fn ownables_lock(metadata: TokenStream, input: TokenStream) -> TokenStream {
 /// adds Consume {} variant to ExecuteMsg
 #[proc_macro_attribute]
 pub fn ownables_consume(metadata: TokenStream, input: TokenStream) -> TokenStream {
-
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     // define the variants to be inserted and parse into DataEnum
     let default_execute_variants: TokenStream = quote! {
@@ -96,7 +83,7 @@ pub fn ownables_consume(metadata: TokenStream, input: TokenStream) -> TokenStrea
             Consume {},
         }
     }
-        .into();
+    .into();
     let default_ast: DeriveInput = parse_macro_input!(default_execute_variants);
     let default_variants = match default_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
@@ -107,7 +94,7 @@ pub fn ownables_consume(metadata: TokenStream, input: TokenStream) -> TokenStrea
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_variants_data = match &mut input_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
-        _ => panic!("only enums can accept variants")
+        _ => panic!("only enums can accept variants"),
     };
 
     // insert variants from the default to input
@@ -116,18 +103,11 @@ pub fn ownables_consume(metadata: TokenStream, input: TokenStream) -> TokenStrea
     quote! { #input_ast }.into()
 }
 
-
 /// adds GetMetadata {} variant to QueryMsg
 #[proc_macro_attribute]
 pub fn ownables_query_metadata(metadata: TokenStream, input: TokenStream) -> TokenStream {
-   
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     // define the variants to be inserted and parse into DataEnum
     let default_query_variants: TokenStream = quote! {
@@ -146,7 +126,7 @@ pub fn ownables_query_metadata(metadata: TokenStream, input: TokenStream) -> Tok
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_variants_data = match &mut input_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
-        _ => panic!("only enums can accept variants")
+        _ => panic!("only enums can accept variants"),
     };
 
     // insert variants from the default to input
@@ -158,14 +138,8 @@ pub fn ownables_query_metadata(metadata: TokenStream, input: TokenStream) -> Tok
 /// adds GetInfo {} variant to QueryMsg
 #[proc_macro_attribute]
 pub fn ownables_query_info(metadata: TokenStream, input: TokenStream) -> TokenStream {
-
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     // define the variants to be inserted and parse into DataEnum
     let default_query_variants: TokenStream = quote! {
@@ -173,7 +147,7 @@ pub fn ownables_query_info(metadata: TokenStream, input: TokenStream) -> TokenSt
             GetInfo {},
         }
     }
-        .into();
+    .into();
     let default_ast: DeriveInput = parse_macro_input!(default_query_variants);
     let default_variants = match default_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
@@ -184,7 +158,7 @@ pub fn ownables_query_info(metadata: TokenStream, input: TokenStream) -> TokenSt
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_variants_data = match &mut input_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
-        _ => panic!("only enums can accept variants")
+        _ => panic!("only enums can accept variants"),
     };
 
     // insert variants from the default to input
@@ -196,14 +170,8 @@ pub fn ownables_query_info(metadata: TokenStream, input: TokenStream) -> TokenSt
 /// adds GetWidgetState {} variant to QueryMsg
 #[proc_macro_attribute]
 pub fn ownables_query_widget_state(metadata: TokenStream, input: TokenStream) -> TokenStream {
-
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     // define the variants to be inserted and parse into DataEnum
     let default_query_variants: TokenStream = quote! {
@@ -211,7 +179,7 @@ pub fn ownables_query_widget_state(metadata: TokenStream, input: TokenStream) ->
             GetWidgetState {},
         }
     }
-        .into();
+    .into();
     let default_ast: DeriveInput = parse_macro_input!(default_query_variants);
     let default_variants = match default_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
@@ -222,7 +190,7 @@ pub fn ownables_query_widget_state(metadata: TokenStream, input: TokenStream) ->
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_variants_data = match &mut input_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
-        _ => panic!("only enums can accept variants")
+        _ => panic!("only enums can accept variants"),
     };
 
     // insert variants from the default to input
@@ -234,14 +202,8 @@ pub fn ownables_query_widget_state(metadata: TokenStream, input: TokenStream) ->
 /// adds IsLocked {} variant to QueryMsg
 #[proc_macro_attribute]
 pub fn ownables_query_locked(metadata: TokenStream, input: TokenStream) -> TokenStream {
-
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     // define the variants to be inserted and parse into DataEnum
     let default_query_variants: TokenStream = quote! {
@@ -249,7 +211,7 @@ pub fn ownables_query_locked(metadata: TokenStream, input: TokenStream) -> Token
             IsLocked {},
         }
     }
-        .into();
+    .into();
     let default_ast: DeriveInput = parse_macro_input!(default_query_variants);
     let default_variants = match default_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
@@ -260,7 +222,7 @@ pub fn ownables_query_locked(metadata: TokenStream, input: TokenStream) -> Token
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_variants_data = match &mut input_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
-        _ => panic!("only enums can accept variants")
+        _ => panic!("only enums can accept variants"),
     };
 
     // insert variants from the default to input
@@ -272,21 +234,15 @@ pub fn ownables_query_locked(metadata: TokenStream, input: TokenStream) -> Token
 /// adds IsConsumed {} variant to QueryMsg
 #[proc_macro_attribute]
 pub fn ownables_query_consumed(metadata: TokenStream, input: TokenStream) -> TokenStream {
-
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     let default_query_variants: TokenStream = quote! {
         enum QueryMsg {
             IsConsumed {},
         }
     }
-        .into();
+    .into();
     let default_ast: DeriveInput = parse_macro_input!(default_query_variants);
     let default_variants = match default_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
@@ -296,7 +252,7 @@ pub fn ownables_query_consumed(metadata: TokenStream, input: TokenStream) -> Tok
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_variants_data = match &mut input_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
-        _ => panic!("only enums can accept variants")
+        _ => panic!("only enums can accept variants"),
     };
 
     input_variants_data.extend(default_variants.into_iter());
@@ -307,14 +263,8 @@ pub fn ownables_query_consumed(metadata: TokenStream, input: TokenStream) -> Tok
 /// adds IsConsumerOf { issuer: Addr, consumable_type: String, } variant to QueryMsg
 #[proc_macro_attribute]
 pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> TokenStream {
-
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     // define the variants to be inserted and parse into DataEnum
     let default_query_variants: TokenStream = quote! {
@@ -325,7 +275,7 @@ pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> 
             },
         }
     }
-        .into();
+    .into();
     let default_ast: DeriveInput = parse_macro_input!(default_query_variants);
     let default_variants = match default_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
@@ -336,7 +286,7 @@ pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> 
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_variants_data = match &mut input_ast.data {
         Enum(DataEnum { variants, .. }) => variants,
-        _ => panic!("only enums can accept variants")
+        _ => panic!("only enums can accept variants"),
     };
 
     // insert variants from the default to input
@@ -356,12 +306,7 @@ pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> 
 #[proc_macro_attribute]
 pub fn ownables_instantiate_msg(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
-    let meta_ast = parse_macro_input!(metadata as AttributeArgs);
-    if let Some(arg) = meta_ast.first() {
-        return syn::Error::new_spanned(arg, "no args expected")
-            .to_compile_error()
-            .into();
-    }
+    parse_macro_input!(metadata as Nothing);
 
     // define the fields to be inserted and parse into DataEnum
     let default_instantiate_fields: TokenStream = quote! {
@@ -370,7 +315,7 @@ pub fn ownables_instantiate_msg(metadata: TokenStream, input: TokenStream) -> To
             pub package: String,
             pub nft: Option<NFT>,
             pub ownable_type: Option<String>,
-            pub network_id: u8,
+            pub network_id: u32,
         }
     }
     .into();
@@ -384,7 +329,7 @@ pub fn ownables_instantiate_msg(metadata: TokenStream, input: TokenStream) -> To
     let mut input_ast: DeriveInput = parse_macro_input!(input);
     let input_fields_data = match &mut input_ast.data {
         Struct(DataStruct { fields, .. }) => fields,
-        _ => panic!("only structs can accept fields")
+        _ => panic!("only structs can accept fields"),
     };
 
     // push the default fields onto the input
@@ -394,5 +339,3 @@ pub fn ownables_instantiate_msg(metadata: TokenStream, input: TokenStream) -> To
 
     quote! { #input_ast }.into()
 }
-
-

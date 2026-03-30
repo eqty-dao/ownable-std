@@ -1,5 +1,5 @@
-use cosmwasm_std::Storage;
 use cosmwasm_std::Order;
+use cosmwasm_std::Storage;
 use std::collections::BTreeMap;
 use std::iter;
 use std::ops::{Bound, RangeBounds};
@@ -22,7 +22,9 @@ impl Storage for MemoryStorage {
 
     fn set(&mut self, key: &[u8], value: &[u8]) {
         if value.is_empty() {
-            panic!("TL;DR: Value must not be empty in Storage::set but in most cases you can use Storage::remove instead. Long story: Getting empty values from storage is not well supported at the moment. Some of our internal interfaces cannot differentiate between a non-existent key and an empty value. Right now, you cannot rely on the behaviour of empty values. To protect you from trouble later on, we stop here. Sorry for the inconvenience! We highly welcome you to contribute to CosmWasm, making this more solid one way or the other.");
+            panic!(
+                "TL;DR: Value must not be empty in Storage::set but in most cases you can use Storage::remove instead. Long story: Getting empty values from storage is not well supported at the moment. Some of our internal interfaces cannot differentiate between a non-existent key and an empty value. Right now, you cannot rely on the behaviour of empty values. To protect you from trouble later on, we stop here. Sorry for the inconvenience! We highly welcome you to contribute to CosmWasm, making this more solid one way or the other."
+            );
         }
 
         self.data.insert(key.to_vec(), value.to_vec());

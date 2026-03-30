@@ -1,14 +1,18 @@
-use cosmwasm_std::{Addr, Api, BlockInfo, CanonicalAddr, ContractInfo, Empty, Env, OwnedDeps, Querier, RecoverPubkeyError, StdError, StdResult, Timestamp, VerificationError, Order, Storage, Uint128, Response};
+use cosmwasm_std::{
+    Addr, Api, BlockInfo, CanonicalAddr, ContractInfo, Empty, Env, Order, OwnedDeps, Querier,
+    RecoverPubkeyError, StdError, StdResult, Storage, Timestamp, Uint128, VerificationError,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::to_string;
 use serde_with::serde_as;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use wasm_bindgen::{JsValue, JsError};
 
+pub mod abi;
 mod memory_storage;
 pub use memory_storage::MemoryStorage;
+#[cfg(feature = "macros")]
+pub use ownable_std_macros::*;
 
 const CANONICAL_LENGTH: usize = 54;
 
@@ -33,8 +37,7 @@ pub fn create_ownable_env(chain_id: impl Into<String>, time: Option<Timestamp>) 
 /// convert an ownable package name into a display title
 /// e.g. `ownable-my-first` -> `My First`
 pub fn package_title_from_name(name: &str) -> String {
-    name
-        .trim_start_matches("ownable-")
+    name.trim_start_matches("ownable-")
         .split(['-', '_'])
         .filter(|part| !part.is_empty())
         .map(|part| {
@@ -48,7 +51,9 @@ pub fn package_title_from_name(name: &str) -> String {
         .join(" ")
 }
 
-pub fn load_owned_deps(state_dump: Option<IdbStateDump>) -> OwnedDeps<MemoryStorage, EmptyApi, EmptyQuerier, Empty> {
+pub fn load_owned_deps(
+    state_dump: Option<IdbStateDump>,
+) -> OwnedDeps<MemoryStorage, EmptyApi, EmptyQuerier, Empty> {
     match state_dump {
         None => OwnedDeps {
             storage: MemoryStorage::default(),
@@ -73,7 +78,6 @@ pub fn get_random_color(hash: String) -> String {
     let (red, green, blue) = derive_rgb_values(hash);
     rgb_hex(red, green, blue)
 }
-
 
 /// takes a hex-encoded hash and derives a seemingly-random rgb tuple
 pub fn derive_rgb_values(hash: String) -> (u8, u8, u8) {
@@ -101,24 +105,6 @@ pub fn rgb_hex(r: u8, g: u8, b: u8) -> String {
     format!("#{:02X}{:02X}{:02X}", r, g, b)
 }
 
-/// takes a cw MemoryStorage and Response and returns a JsValue
-/// response that contains the memory state dump and response
-/// result
-pub fn get_json_response(storage: MemoryStorage, response: Response) -> Result<JsValue, JsError> {
-    let state_dump= IdbStateDump::from(storage);
-    let ownable_state = to_string(&response)?;
-    let response_map = js_sys::Map::new();
-    response_map.set(
-        &JsValue::from_str("mem"),
-        &JsValue::from(to_string(&state_dump)?)
-    );
-    response_map.set(
-        &JsValue::from_str("result"),
-        &JsValue::from(ownable_state)
-    );
-    Ok(JsValue::from(response_map))
-}
-
 pub struct IdbStorage {
     pub storage: MemoryStorage,
 }
@@ -144,7 +130,7 @@ impl IdbStorage {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct IdbStateDump {
     // map of the indexed db key value pairs of the state object store
-    #[serde_as(as = "Vec<(_, _)>")]
+    #[serde_as(as = "Vec<(serde_with::Bytes, serde_with::Bytes)>")]
     pub state_dump: HashMap<Vec<u8>, Vec<u8>>,
 }
 
@@ -153,12 +139,10 @@ impl IdbStateDump {
     pub fn from(store: MemoryStorage) -> IdbStateDump {
         let mut state: HashMap<Vec<u8>, Vec<u8>> = HashMap::new();
 
-        for (key, value) in store.range(None,None, Order::Ascending) {
+        for (key, value) in store.range(None, None, Order::Ascending) {
             state.insert(key, value);
         }
-        IdbStateDump {
-            state_dump: state,
-        }
+        IdbStateDump { state_dump: state }
     }
 }
 
@@ -187,14 +171,10 @@ impl Api for EmptyApi {
     fn addr_canonicalize(&self, human: &str) -> StdResult<CanonicalAddr> {
         // Dummy input validation. This is more sophisticated for formats like bech32, where format and checksum are validated.
         if human.len() < 3 {
-            return Err(StdError::msg(
-                "Invalid input: human address too short",
-            ));
+            return Err(StdError::msg("Invalid input: human address too short"));
         }
         if human.len() > self.canonical_length {
-            return Err(StdError::msg(
-                "Invalid input: human address too long",
-            ));
+            return Err(StdError::msg("Invalid input: human address too long"));
         }
 
         let mut out = Vec::from(human);
@@ -365,8 +345,14 @@ mod tests {
         storage.set(b"key2", b"value2");
 
         let dump = IdbStateDump::from(storage);
-        assert_eq!(dump.state_dump.get(b"key1".as_ref()), Some(&b"value1".to_vec()));
-        assert_eq!(dump.state_dump.get(b"key2".as_ref()), Some(&b"value2".to_vec()));
+        assert_eq!(
+            dump.state_dump.get(b"key1".as_ref()),
+            Some(&b"value1".to_vec())
+        );
+        assert_eq!(
+            dump.state_dump.get(b"key2".as_ref()),
+            Some(&b"value2".to_vec())
+        );
     }
 
     #[test]
@@ -446,7 +432,7 @@ pub struct OwnableInfo {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct NFT {
-    pub network: String,    // eip155:1
+    pub network: String, // eip155:1
     pub id: Uint128,
     pub address: String, // 0x341...
     pub lock_service: Option<String>,

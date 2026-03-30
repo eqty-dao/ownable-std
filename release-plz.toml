@@ -3,3 +3,13 @@
 release_commits = "^(feat|fix)(\\(.+\\))?(!)?:"
 # Keep semantic-release-like behavior for feature commits on 0.x versions.
 features_always_increment_minor = true
+
+[[package]]
+name = "ownable-std"
+version_group = "ownable"
+release_always = true
+
+[[package]]
+name = "ownable-std-macros"
+version_group = "ownable"
+release_always = true
