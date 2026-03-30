@@ -130,7 +130,7 @@ impl IdbStorage {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct IdbStateDump {
     // map of the indexed db key value pairs of the state object store
-    #[serde_as(as = "Vec<(_, _)>")]
+    #[serde_as(as = "Vec<(serde_with::Bytes, serde_with::Bytes)>")]
     pub state_dump: HashMap<Vec<u8>, Vec<u8>>,
 }
 

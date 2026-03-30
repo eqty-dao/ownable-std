@@ -315,7 +315,7 @@ pub fn ownables_instantiate_msg(metadata: TokenStream, input: TokenStream) -> To
             pub package: String,
             pub nft: Option<NFT>,
             pub ownable_type: Option<String>,
-            pub network_id: u8,
+            pub network_id: u32,
         }
     }
     .into();

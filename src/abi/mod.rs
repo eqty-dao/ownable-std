@@ -1,3 +1,5 @@
+use crate::IdbStateDump;
+use cosmwasm_std::Response;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::panic::UnwindSafe;
@@ -49,16 +51,10 @@ impl From<&str> for HostAbiError {
     }
 }
 
-impl From<serde_cbor::Error> for HostAbiError {
-    fn from(value: serde_cbor::Error) -> Self {
-        Self::with_code(ERR_INVALID_CBOR, value.to_string())
-    }
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct HostAbiResponse {
     pub success: bool,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty", with = "serde_bytes")]
     pub payload: Vec<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_code: Option<String>,
@@ -162,13 +158,27 @@ pub fn write_memory(data: &[u8]) -> u64 {
     pack_ptr_len(ptr, len)
 }
 
+/// Deserialize CBOR bytes into a value.
+pub fn cbor_from_slice<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, HostAbiError> {
+    ciborium::de::from_reader(bytes)
+        .map_err(|e| HostAbiError::with_code(ERR_INVALID_CBOR, e.to_string()))
+}
+
+/// Serialize a value to CBOR bytes.
+pub fn cbor_to_vec<T: serde::Serialize>(value: &T) -> Result<Vec<u8>, HostAbiError> {
+    let mut buf = Vec::new();
+    ciborium::ser::into_writer(value, &mut buf)
+        .map_err(|e| HostAbiError::with_code(ERR_SERIALIZATION_FAILED, e.to_string()))?;
+    Ok(buf)
+}
+
 pub fn encode_response(response: &HostAbiResponse) -> u64 {
-    let encoded = serde_cbor::to_vec(response).unwrap_or_else(|error| {
+    let encoded = cbor_to_vec(response).unwrap_or_else(|error| {
         let fallback = HostAbiResponse::err(HostAbiError::with_code(
             ERR_SERIALIZATION_FAILED,
-            error.to_string(),
+            error.message,
         ));
-        serde_cbor::to_vec(&fallback).unwrap_or_else(|_| Vec::new())
+        cbor_to_vec(&fallback).unwrap_or_default()
     });
     write_memory(&encoded)
 }
@@ -243,6 +253,68 @@ macro_rules! ownable_host_abi_v1 {
     };
 }
 
+/// A single key-value attribute from a contract response.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AbiAttribute {
+    pub key: String,
+    pub value: String,
+}
+
+/// An event emitted by a contract response.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AbiEvent {
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub attributes: Vec<AbiAttribute>,
+}
+
+/// CBOR-native representation of a cosmwasm execute/instantiate/external_event Response.
+/// Only carries the fields the host actually needs; skips messages and sub-messages.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AbiResponse {
+    pub attributes: Vec<AbiAttribute>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub events: Vec<AbiEvent>,
+}
+
+impl From<Response> for AbiResponse {
+    fn from(r: Response) -> Self {
+        AbiResponse {
+            attributes: r
+                .attributes
+                .into_iter()
+                .map(|a| AbiAttribute { key: a.key, value: a.value })
+                .collect(),
+            events: r
+                .events
+                .into_iter()
+                .map(|e| AbiEvent {
+                    kind: e.ty,
+                    attributes: e
+                        .attributes
+                        .into_iter()
+                        .map(|a| AbiAttribute { key: a.key, value: a.value })
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
+}
+
+/// The inner payload returned by every ABI handler, CBOR-encoded inside `HostAbiResponse.payload`.
+///
+/// - `result` carries raw bytes:
+///   - for execute/instantiate/external_event: a CBOR-encoded `AbiResponse`
+///   - for query: the raw bytes from cosmwasm `Binary` (JSON-encoded by `to_json_binary`)
+/// - `mem` is present for state-mutating calls; absent for queries.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AbiResultPayload {
+    #[serde(with = "serde_bytes")]
+    pub result: Vec<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mem: Option<IdbStateDump>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,8 +328,8 @@ mod tests {
     #[test]
     fn response_serializes_error_fields() {
         let response = HostAbiResponse::err(HostAbiError::with_code("E", "failed"));
-        let encoded = serde_cbor::to_vec(&response).expect("serialize");
-        let decoded: HostAbiResponse = serde_cbor::from_slice(&encoded).expect("deserialize");
+        let encoded = cbor_to_vec(&response).expect("serialize");
+        let decoded: HostAbiResponse = cbor_from_slice(&encoded).expect("deserialize");
         assert!(!decoded.success);
         assert_eq!(decoded.error_code.as_deref(), Some("E"));
         assert_eq!(decoded.error_message.as_deref(), Some("failed"));
@@ -266,15 +338,48 @@ mod tests {
     #[test]
     fn response_omits_empty_payload() {
         let response = HostAbiResponse::err("boom");
-        let encoded = serde_cbor::to_vec(&response).expect("serialize");
-        let decoded: HostAbiResponse = serde_cbor::from_slice(&encoded).expect("deserialize");
+        let encoded = cbor_to_vec(&response).expect("serialize");
+        let decoded: HostAbiResponse = cbor_from_slice(&encoded).expect("deserialize");
         assert!(decoded.payload.is_empty());
     }
 
     #[test]
-    fn serde_cbor_error_maps_to_invalid_cbor_code() {
-        let err = serde_cbor::from_slice::<HostAbiResponse>(b"\xff").expect_err("invalid");
-        let abi_err: HostAbiError = err.into();
+    fn payload_round_trips_as_cbor_bytes_not_array() {
+        // Ensure Vec<u8> payload is encoded as CBOR byte string (major type 2),
+        // not a CBOR array of integers (major type 4). cbor-x on the JS side
+        // decodes byte strings to Uint8Array; it cannot decode a CBOR array as
+        // input to a second decode() call.
+        let inner = vec![0x01u8, 0x02, 0x03];
+        let response = HostAbiResponse::ok(inner.clone());
+        let encoded = cbor_to_vec(&response).expect("serialize");
+
+        // The "payload" value in the CBOR map must be a byte string (major type 2),
+        // NOT an array (major type 4).
+        let value: ciborium::Value = ciborium::de::from_reader(&encoded[..]).expect("parse as Value");
+        if let ciborium::Value::Map(entries) = value {
+            let payload_val = entries
+                .into_iter()
+                .find(|(k, _)| k == &ciborium::Value::Text("payload".into()))
+                .map(|(_, v)| v)
+                .expect("payload key present");
+            assert!(
+                matches!(payload_val, ciborium::Value::Bytes(_)),
+                "payload must be CBOR bytes, got {:?}",
+                payload_val
+            );
+        } else {
+            panic!("expected CBOR map");
+        }
+
+        // Also verify round-trip correctness.
+        let decoded: HostAbiResponse = cbor_from_slice(&encoded).expect("deserialize");
+        assert_eq!(decoded.payload, inner);
+    }
+
+    #[test]
+    fn cbor_parse_error_maps_to_invalid_cbor_code() {
+        let result: Result<HostAbiResponse, _> = cbor_from_slice(b"\xff");
+        let abi_err = result.expect_err("should fail on invalid CBOR");
         assert_eq!(abi_err.code.as_deref(), Some(ERR_INVALID_CBOR));
     }
 
