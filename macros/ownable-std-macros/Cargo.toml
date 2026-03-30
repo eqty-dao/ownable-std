@@ -4,6 +4,7 @@ description = "proc macros for lto ownable contracts"
 version.workspace = true
 edition = "2021"
 license = "MIT"
+exclude = ["Cargo.lock"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
