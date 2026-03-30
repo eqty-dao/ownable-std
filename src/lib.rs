@@ -16,10 +16,12 @@ pub use ownable_std_macros::*;
 
 const CANONICAL_LENGTH: usize = 54;
 
+/// Creates a default [`Env`] for host-side execution.
 pub fn create_env() -> Env {
     create_ownable_env(String::new(), None)
 }
 
+/// Creates an [`Env`] with a configurable chain id and optional timestamp.
 pub fn create_ownable_env(chain_id: impl Into<String>, time: Option<Timestamp>) -> Env {
     Env {
         block: BlockInfo {
@@ -51,6 +53,7 @@ pub fn package_title_from_name(name: &str) -> String {
         .join(" ")
 }
 
+/// Builds in-memory dependencies for contract execution, optionally preloaded from IndexedDB dump data.
 pub fn load_owned_deps(
     state_dump: Option<IdbStateDump>,
 ) -> OwnedDeps<MemoryStorage, EmptyApi, EmptyQuerier, Empty> {
@@ -105,11 +108,13 @@ pub fn rgb_hex(r: u8, g: u8, b: u8) -> String {
     format!("#{:02X}{:02X}{:02X}", r, g, b)
 }
 
+/// Wrapper around [`MemoryStorage`] with helpers to load state from browser IndexedDB dumps.
 pub struct IdbStorage {
     pub storage: MemoryStorage,
 }
 
 impl IdbStorage {
+    /// Creates a new [`IdbStorage`] and populates it from a serialized state dump.
     pub fn load(idb: IdbStateDump) -> Self {
         let mut store = IdbStorage {
             storage: MemoryStorage::new(),
@@ -128,6 +133,7 @@ impl IdbStorage {
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+/// Serialized contract storage dump used to move state between JS and Rust.
 pub struct IdbStateDump {
     // map of the indexed db key value pairs of the state object store
     #[serde_as(as = "Vec<(serde_with::Bytes, serde_with::Bytes)>")]
@@ -401,6 +407,7 @@ mod tests {
 
 // from github.com/CosmWasm/cw-nfts/blob/main/contracts/cw721-metadata-onchain
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
+/// Standard NFT metadata object.
 pub struct Metadata {
     pub image: Option<String>,
     pub image_data: Option<String>,
@@ -415,6 +422,7 @@ pub struct Metadata {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
+/// External event emitted by ownable contracts.
 pub struct ExternalEventMsg {
     // CAIP-2 format: <namespace + ":" + reference>
     // e.g. ethereum: eip155:1
@@ -424,6 +432,7 @@ pub struct ExternalEventMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+/// Core ownable ownership metadata.
 pub struct OwnableInfo {
     pub owner: Addr,
     pub issuer: Addr,
@@ -431,6 +440,7 @@ pub struct OwnableInfo {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+/// NFT reference used by ownables.
 pub struct NFT {
     pub network: String, // eip155:1
     pub id: Uint128,
@@ -439,6 +449,7 @@ pub struct NFT {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+/// Response payload for ownable info queries.
 pub struct InfoResponse {
     pub owner: Addr,
     pub issuer: Addr,

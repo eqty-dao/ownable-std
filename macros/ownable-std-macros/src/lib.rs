@@ -7,7 +7,7 @@ use syn::{
     DataEnum, DataStruct, DeriveInput, FieldsNamed,
 };
 
-/// adds Transfer { to: Addr } variant to ExecuteMsg
+/// Adds `Transfer { to: Addr }` to an `ExecuteMsg` enum.
 #[proc_macro_attribute]
 pub fn ownables_transfer(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
@@ -39,7 +39,7 @@ pub fn ownables_transfer(metadata: TokenStream, input: TokenStream) -> TokenStre
     quote! { #input_ast }.into()
 }
 
-/// adds Lock {} variant to ExecuteMsg
+/// Adds `Lock {}` to an `ExecuteMsg` enum.
 #[proc_macro_attribute]
 pub fn ownables_lock(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
@@ -71,7 +71,7 @@ pub fn ownables_lock(metadata: TokenStream, input: TokenStream) -> TokenStream {
     quote! { #input_ast }.into()
 }
 
-/// adds Consume {} variant to ExecuteMsg
+/// Adds `Consume {}` to an `ExecuteMsg` enum.
 #[proc_macro_attribute]
 pub fn ownables_consume(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
@@ -103,7 +103,7 @@ pub fn ownables_consume(metadata: TokenStream, input: TokenStream) -> TokenStrea
     quote! { #input_ast }.into()
 }
 
-/// adds GetMetadata {} variant to QueryMsg
+/// Adds `GetMetadata {}` to a `QueryMsg` enum.
 #[proc_macro_attribute]
 pub fn ownables_query_metadata(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
@@ -135,7 +135,7 @@ pub fn ownables_query_metadata(metadata: TokenStream, input: TokenStream) -> Tok
     quote! { #input_ast }.into()
 }
 
-/// adds GetInfo {} variant to QueryMsg
+/// Adds `GetInfo {}` to a `QueryMsg` enum.
 #[proc_macro_attribute]
 pub fn ownables_query_info(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
@@ -167,7 +167,7 @@ pub fn ownables_query_info(metadata: TokenStream, input: TokenStream) -> TokenSt
     quote! { #input_ast }.into()
 }
 
-/// adds GetWidgetState {} variant to QueryMsg
+/// Adds `GetWidgetState {}` to a `QueryMsg` enum.
 #[proc_macro_attribute]
 pub fn ownables_query_widget_state(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
@@ -199,7 +199,7 @@ pub fn ownables_query_widget_state(metadata: TokenStream, input: TokenStream) ->
     quote! { #input_ast }.into()
 }
 
-/// adds IsLocked {} variant to QueryMsg
+/// Adds `IsLocked {}` to a `QueryMsg` enum.
 #[proc_macro_attribute]
 pub fn ownables_query_locked(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
@@ -231,7 +231,7 @@ pub fn ownables_query_locked(metadata: TokenStream, input: TokenStream) -> Token
     quote! { #input_ast }.into()
 }
 
-/// adds IsConsumed {} variant to QueryMsg
+/// Adds `IsConsumed {}` to a `QueryMsg` enum.
 #[proc_macro_attribute]
 pub fn ownables_query_consumed(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
@@ -260,7 +260,7 @@ pub fn ownables_query_consumed(metadata: TokenStream, input: TokenStream) -> Tok
     quote! { #input_ast }.into()
 }
 
-/// adds IsConsumerOf { issuer: Addr, consumable_type: String, } variant to QueryMsg
+/// Adds `IsConsumerOf { issuer: Addr, consumable_type: String }` to a `QueryMsg` enum.
 #[proc_macro_attribute]
 pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> TokenStream {
     // validate no input args
@@ -295,7 +295,7 @@ pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> 
     quote! { #input_ast }.into()
 }
 
-/// adds the default fields to InstantiateMsg struct:
+/// Adds default ownables fields to an `InstantiateMsg` struct:
 /// InstantiateMsg {
 ///     pub ownable_id: String,
 ///     pub package: String,

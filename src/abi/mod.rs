@@ -13,6 +13,7 @@ pub const ERR_INVALID_CBOR: &str = "INVALID_CBOR";
 pub const ERR_SERIALIZATION_FAILED: &str = "SERIALIZATION_FAILED";
 pub const ERR_HANDLER_PANIC: &str = "HANDLER_PANIC";
 
+/// Error object returned by the host ABI envelope.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct HostAbiError {
     pub code: Option<String>,
@@ -20,6 +21,7 @@ pub struct HostAbiError {
 }
 
 impl HostAbiError {
+    /// Creates an error without a machine-readable code.
     pub fn new(message: impl Into<String>) -> Self {
         Self {
             code: None,
@@ -27,6 +29,7 @@ impl HostAbiError {
         }
     }
 
+    /// Creates an error with both code and message.
     pub fn with_code(code: impl Into<String>, message: impl Into<String>) -> Self {
         Self {
             code: Some(code.into()),
@@ -34,6 +37,7 @@ impl HostAbiError {
         }
     }
 
+    /// Creates an error from any displayable value.
     pub fn from_display(err: impl Display) -> Self {
         Self::new(err.to_string())
     }
@@ -52,6 +56,7 @@ impl From<&str> for HostAbiError {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+/// Top-level response envelope used by host ABI exports.
 pub struct HostAbiResponse {
     pub success: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty", with = "serde_bytes")]
@@ -63,6 +68,7 @@ pub struct HostAbiResponse {
 }
 
 impl HostAbiResponse {
+    /// Builds a successful response with encoded payload bytes.
     pub fn ok(payload: Vec<u8>) -> Self {
         Self {
             success: true,
@@ -72,6 +78,7 @@ impl HostAbiResponse {
         }
     }
 
+    /// Builds an error response from any value convertible to [`HostAbiError`].
     pub fn err(error: impl Into<HostAbiError>) -> Self {
         let error = error.into();
         Self {
@@ -83,10 +90,12 @@ impl HostAbiResponse {
     }
 }
 
+/// Packs `(ptr, len)` into a single `u64` where the high 32 bits hold length.
 pub fn pack_ptr_len(ptr: u32, len: u32) -> u64 {
     ((len as u64) << 32) | (ptr as u64)
 }
 
+/// Unpacks a pointer/length pair produced by [`pack_ptr_len`].
 pub fn unpack_ptr_len(packed: u64) -> (u32, u32) {
     let ptr = packed as u32;
     let len = (packed >> 32) as u32;
@@ -124,6 +133,7 @@ pub unsafe fn free(ptr: u32, len: u32) {
     }
 }
 
+/// Reads a byte slice from wasm linear memory.
 pub fn read_memory(ptr: u32, len: u32) -> Result<Vec<u8>, HostAbiError> {
     if len == 0 {
         return Ok(Vec::new());
@@ -140,6 +150,7 @@ pub fn read_memory(ptr: u32, len: u32) -> Result<Vec<u8>, HostAbiError> {
     Ok(bytes.to_vec())
 }
 
+/// Writes bytes into wasm linear memory and returns a packed pointer/length pair.
 pub fn write_memory(data: &[u8]) -> u64 {
     let len = data.len() as u32;
     if len == 0 {
@@ -172,6 +183,7 @@ pub fn cbor_to_vec<T: serde::Serialize>(value: &T) -> Result<Vec<u8>, HostAbiErr
     Ok(buf)
 }
 
+/// Serializes [`HostAbiResponse`] to CBOR and writes it into wasm memory.
 pub fn encode_response(response: &HostAbiResponse) -> u64 {
     let encoded = cbor_to_vec(response).unwrap_or_else(|error| {
         let fallback = HostAbiResponse::err(HostAbiError::with_code(
@@ -183,6 +195,7 @@ pub fn encode_response(response: &HostAbiResponse) -> u64 {
     write_memory(&encoded)
 }
 
+/// Reads input bytes, invokes a handler, and returns an encoded ABI response.
 pub fn dispatch<E, F>(ptr: u32, len: u32, handler: F) -> u64
 where
     E: Into<HostAbiError>,
@@ -192,6 +205,7 @@ where
     encode_response(&response)
 }
 
+/// Converts handler output (or failure) into [`HostAbiResponse`].
 pub fn dispatch_response<E, F>(input: Result<Vec<u8>, HostAbiError>, handler: F) -> HostAbiResponse
 where
     E: Into<HostAbiError>,
@@ -283,7 +297,10 @@ impl From<Response> for AbiResponse {
             attributes: r
                 .attributes
                 .into_iter()
-                .map(|a| AbiAttribute { key: a.key, value: a.value })
+                .map(|a| AbiAttribute {
+                    key: a.key,
+                    value: a.value,
+                })
                 .collect(),
             events: r
                 .events
@@ -293,7 +310,10 @@ impl From<Response> for AbiResponse {
                     attributes: e
                         .attributes
                         .into_iter()
-                        .map(|a| AbiAttribute { key: a.key, value: a.value })
+                        .map(|a| AbiAttribute {
+                            key: a.key,
+                            value: a.value,
+                        })
                         .collect(),
                 })
                 .collect(),
@@ -355,7 +375,8 @@ mod tests {
 
         // The "payload" value in the CBOR map must be a byte string (major type 2),
         // NOT an array (major type 4).
-        let value: ciborium::Value = ciborium::de::from_reader(&encoded[..]).expect("parse as Value");
+        let value: ciborium::Value =
+            ciborium::de::from_reader(&encoded[..]).expect("parse as Value");
         if let ciborium::Value::Map(entries) = value {
             let payload_val = entries
                 .into_iter()
