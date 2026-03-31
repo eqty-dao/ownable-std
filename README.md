@@ -7,15 +7,6 @@ It provides:
 - optional message-shaping proc macros (`ownable-std-macros`)
 - a stable Host ABI v1 for wasm runtime calls that does not depend on `wasm-bindgen` JS glue compatibility
 
-## Why Host ABI v1
-
-Historically, browser/runtime integration could fail when wasm output and `wasm-bindgen` JS glue drifted.
-
-Host ABI v1 fixes the contract boundary by using fixed exported symbols and a bytes-in/bytes-out protocol:
-- no hash-derived bindgen symbol coupling
-- no requirement to trust package-provided generated JS glue
-- runtime can call any contract that keeps the same ABI version
-
 ## Install
 
 ```toml
@@ -92,7 +83,7 @@ Response envelope schema (decoded structure):
 }
 ```
 
-## Contract Usage (No `wasm_bindgen`)
+## Contract Usage
 
 Use the `ownable_host_abi_v1!` macro to export all required ABI symbols.
 
@@ -177,12 +168,7 @@ Expected behavior:
 - handler CBOR parse fails (`serde_cbor::from_slice`)
 - error is mapped to structured ABI error envelope (`success=false`, `error_code=INVALID_CBOR`)
 
-## Building Ownables Without `wasm_bindgen`
-
-Contract-side requirements:
-- do not export runtime entrypoints with `#[wasm_bindgen]`
-- do not rely on generated `*.js` glue for host calls
-- export only the stable `ownable_*` ABI symbols (via `ownable_host_abi_v1!`)
+## Building Ownables
 
 Build command:
 
@@ -191,6 +177,11 @@ cargo build --target wasm32-unknown-unknown --release
 ```
 
 This produces a wasm module consumable by a host/runtime that implements Host ABI v1.
+
+Contract-side requirements:
+- do not export runtime entrypoints with `#[wasm_bindgen]`
+- do not rely on generated `*.js` glue for host calls
+- export only the stable `ownable_*` ABI symbols (via `ownable_host_abi_v1!`)
 
 ## End-to-End Test Vector
 
