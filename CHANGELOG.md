@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0](https://github.com/eqty-dao/ownable-std/compare/v0.4.0...v0.5.0) - 2026-03-31
+
+### Added
+
+- add CI workflow to run workspace unit tests on GitHub Actions
+- add rustdoc (`///`) comments to main public APIs in `ownable-std` and `ownable-std-macros`
+
+### Fixed
+
+- fix release-plz config parsing by moving `release_always` to workspace level
+
 ## [0.4.0](https://github.com/eqty-dao/ownable-std/compare/v0.3.1...v0.4.0) - 2026-03-26
 
 ### Added

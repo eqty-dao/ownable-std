@@ -2,7 +2,7 @@
 members = [".", "macros/ownable-std-macros"]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 
 [package]
 name = "ownable-std"
@@ -19,7 +19,7 @@ macros = ["dep:ownable-std-macros"]
 
 [dependencies]
 cosmwasm-std = "3"
-ownable-std-macros = { version = "=0.4.0", path = "macros/ownable-std-macros", optional = true }
+ownable-std-macros = { version = "=0.5.0", path = "macros/ownable-std-macros", optional = true }
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 serde_with = "3"
 hex = "0.4.3"
