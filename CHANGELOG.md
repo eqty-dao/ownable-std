@@ -11,8 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- add CI workflow to run workspace unit tests on GitHub Actions
-- add rustdoc (`///`) comments to main public APIs in `ownable-std` and `ownable-std-macros`
+- stable host ABI v1 exports for ownable wasm entry points
+- CBOR-native host ABI request/response handling and payload encoding
+- explicit ABI compatibility constants including wire-format markers
+- structured ABI error model with handler panic/serialization/CBOR error codes
+- ABI response conversion types for CosmWasm `Response` data
+
+### Changed
+
+- host wire format switched from JSON/serde_json interop to CBOR (`ciborium`)
+- removed bindgen runtime interop path from `ownable-std` runtime
+- `ownable-std` and `ownable-std-macros` now released in lockstep version groups
+- procedural macros migrated to `syn` v2
+
+### Documentation
+
+- expanded ABI specification and runtime semantics in README
+- added rustdoc (`///`) for core public APIs in `ownable-std` and `ownable-std-macros`
+- added tests workflow for workspace unit tests on GitHub Actions
 
 ### Fixed
 
