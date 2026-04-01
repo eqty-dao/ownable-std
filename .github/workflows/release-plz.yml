@@ -31,6 +31,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Pin macros dependency for publish
+        shell: bash
+        run: |
+          VERSION="$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name=="ownable-std") | .version')"
+          sed -i -E "s#^ownable-std-macros = \\{.*\\}\$#ownable-std-macros = { version = \"=${VERSION}\", path = \"macros/ownable-std-macros\", optional = true }#" Cargo.toml
+          grep '^ownable-std-macros = ' Cargo.toml
+
       - name: Run release-plz (release)
         uses: release-plz/action@v0.5
         with:

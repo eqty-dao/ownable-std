@@ -5,6 +5,8 @@ release_commits = "^(feat|fix)(\\(.+\\))?(!)?:"
 features_always_increment_minor = true
 # Release on every run of `release-plz release` (default behavior).
 release_always = true
+# Allow release workflow to patch Cargo.toml in CI before publishing.
+publish_allow_dirty = true
 
 [[package]]
 name = "ownable-std"
