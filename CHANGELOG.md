@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/eqty-dao/ownable-std/compare/ownable-std-v0.5.0...ownable-std-v0.6.0) - 2026-04-01
+
+### Added
+
+- add ensure_owner helper for owner authorization
+
+### Fixed
+
+- use path-only macros dependency for release-plz update
+
+### Other
+
+- Don't emphesise on no wasm_bindgen in README
+
 ## [0.5.0](https://github.com/eqty-dao/ownable-std/compare/v0.4.0...v0.5.0) - 2026-03-31
 
 ### Added
