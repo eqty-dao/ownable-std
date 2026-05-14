@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 pub mod abi;
+pub mod public_event;
 mod memory_storage;
 pub use memory_storage::MemoryStorage;
 #[cfg(feature = "macros")]
@@ -486,17 +487,6 @@ pub struct Metadata {
     pub background_color: Option<String>,
     pub animation_url: Option<String>,
     pub youtube_url: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
-/// External event emitted by ownable contracts.
-pub struct ExternalEventMsg {
-    // CAIP-2 format: <namespace + ":" + reference>
-    // e.g. ethereum: eip155:1
-    pub network: Option<String>,
-    pub event_type: String,
-    pub attributes: HashMap<String, String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

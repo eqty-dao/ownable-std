@@ -6,6 +6,7 @@ It provides:
 - common types/utilities used by Ownables contracts
 - optional message-shaping proc macros (`ownable-std-macros`)
 - a stable Host ABI v1 for wasm runtime calls that does not depend on `wasm-bindgen` JS glue compatibility
+- typed public-event helpers for decoding opaque EVM ABI payloads inside Ownable contracts
 
 ## Install
 
@@ -50,11 +51,12 @@ Wire format:
 
 ### Request Schemas (Per Call)
 
-At the ABI transport layer, all four calls use the same schema:
+At the ABI transport layer, three calls use contract-defined CBOR payloads:
 - `instantiate`: CBOR document bytes
 - `execute`: CBOR document bytes
 - `query`: CBOR document bytes
-- `external_event`: CBOR document bytes
+
+`external_event` uses a standardized CBOR-encoded `ownable_std::public_event::PublicEvent` payload.
 
 Required ABI-level keys:
 - none (the full request shape is contract-defined)
@@ -107,8 +109,25 @@ fn query_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
 }
 
 fn external_event_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
-    let v: serde_cbor::Value = serde_cbor::from_slice(input)?;
-    serde_cbor::to_vec(&v).map_err(HostAbiError::from)
+    let event: ownable_std::public_event::PublicEvent = ownable_std::abi::cbor_from_slice(input)?;
+    let response = match event.event_type.as_str() {
+        "consume" => {
+            type ConsumeEvent = alloy_sol_types::sol!((address consumer, uint256 amount));
+            let (_consumer, _amount) =
+                ownable_std::public_event::decode_abi_for::<ConsumeEvent>(&event, "consume")?;
+            ownable_std::abi::AbiResponse {
+                attributes: vec![],
+                events: vec![],
+            }
+        }
+        other => {
+            return Err(HostAbiError::new(format!(
+                "unsupported public event type: {other}"
+            )));
+        }
+    };
+
+    ownable_std::abi::cbor_to_vec(&response).map_err(HostAbiError::from)
 }
 
 ownable_host_abi_v1!(
@@ -212,6 +231,7 @@ Expected output envelope bytes decode to the same payload bytes.
 
 - `MemoryStorage`: in-memory storage implementation for testing/off-chain execution
 - `create_env` / `create_ownable_env`: env builders
+- `public_event`: canonical public-event transport type plus ABI decode helpers
 - `package_title_from_name`, color helpers, metadata/shared message structs
 - `ownable-std-macros`: attribute macros to extend execute/query/instantiate messages
 
