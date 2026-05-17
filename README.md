@@ -57,9 +57,9 @@ At the ABI transport layer, three calls use contract-defined CBOR payloads:
 - `execute`: CBOR document bytes
 - `query`: CBOR document bytes
 
-`register` uses a standardized CBOR-encoded `ownable_std::external_event::PublicEvent` payload.
+`register` uses a standardized CBOR-encoded `ownable_std::register::PublicEvent` payload.
 
-`ingest` uses a standardized CBOR-encoded `ownable_std::external_event::OwnableEvent` payload.
+`ingest` uses a standardized CBOR-encoded `ownable_std::ingest::OwnableEvent` payload.
 
 Required ABI-level keys:
 - none (the full request shape is contract-defined)
@@ -112,12 +112,12 @@ fn query_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
 }
 
 fn register_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
-    let event: ownable_std::external_event::PublicEvent = ownable_std::abi::cbor_from_slice(input)?;
+    let event: ownable_std::register::PublicEvent = ownable_std::abi::cbor_from_slice(input)?;
     let response = match event.event_type.as_str() {
         "consume" => {
             type ConsumeEvent = alloy_sol_types::sol!((address consumer, uint256 amount));
             let (_consumer, _amount) =
-                ownable_std::external_event::decode_abi_for::<ConsumeEvent>(&event, "consume")?;
+                ownable_std::register::decode_abi_for::<ConsumeEvent>(&event, "consume")?;
             ownable_std::abi::AbiResponse {
                 attributes: vec![],
                 events: vec![],
@@ -134,9 +134,9 @@ fn register_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
 }
 
 fn ingest_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
-    let event: ownable_std::external_event::OwnableEvent =
+    let event: ownable_std::ingest::OwnableEvent =
         ownable_std::abi::cbor_from_slice(input)?;
-    ownable_std::external_event::require_ownable_event_type(&event, "consume")
+    ownable_std::ingest::require_ownable_event_type(&event, "consume")
         .map_err(HostAbiError::from_display)?;
 
     let amount = event
@@ -258,7 +258,7 @@ Expected output envelope bytes decode to the same payload bytes.
 
 - `MemoryStorage`: in-memory storage implementation for testing/off-chain execution
 - `create_env` / `create_ownable_env`: env builders
-- `external_event`: public and cross-ownable event transport types plus helpers
+- `register` / `ingest`: public and cross-ownable event transport types plus helpers
 - `package_title_from_name`, color helpers, metadata/shared message structs
 - `ownable-std-macros`: attribute macros to extend execute/query/instantiate messages
 
