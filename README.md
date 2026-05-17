@@ -12,14 +12,14 @@ It provides:
 
 ```toml
 [dependencies]
-ownable-std = "0.4.0"
+ownable-std = "0.7.0"
 ```
 
 `macros` is enabled by default. To disable proc macros:
 
 ```toml
 [dependencies]
-ownable-std = { version = "0.4.0", default-features = false }
+ownable-std = { version = "0.7.0", default-features = false }
 ```
 
 `ownable-std` has no `wasm-bindgen` or `js-sys` dependency in runtime contract usage.
