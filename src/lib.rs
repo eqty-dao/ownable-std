@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 pub mod abi;
-pub mod public_event;
+pub mod external_event;
 mod memory_storage;
 pub use memory_storage::MemoryStorage;
 #[cfg(feature = "macros")]

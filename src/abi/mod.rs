@@ -232,7 +232,8 @@ macro_rules! ownable_host_abi_v1 {
         instantiate = $instantiate:path,
         execute = $execute:path,
         query = $query:path,
-        external_event = $external_event:path $(,)?
+        register = $register:path,
+        ingest = $ingest:path $(,)?
     ) => {
         #[unsafe(no_mangle)]
         pub extern "C" fn ownable_alloc(len: u32) -> u32 {
@@ -261,8 +262,13 @@ macro_rules! ownable_host_abi_v1 {
         }
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn ownable_external_event(ptr: u32, len: u32) -> u64 {
-            $crate::abi::dispatch(ptr, len, $external_event)
+        pub extern "C" fn ownable_register(ptr: u32, len: u32) -> u64 {
+            $crate::abi::dispatch(ptr, len, $register)
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn ownable_ingest(ptr: u32, len: u32) -> u64 {
+            $crate::abi::dispatch(ptr, len, $ingest)
         }
     };
 }
@@ -282,7 +288,7 @@ pub struct AbiEvent {
     pub attributes: Vec<AbiAttribute>,
 }
 
-/// CBOR-native representation of a cosmwasm execute/instantiate/external_event Response.
+/// CBOR-native representation of a cosmwasm execute/instantiate/register/ingest Response.
 /// Only carries the fields the host actually needs; skips messages and sub-messages.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AbiResponse {
@@ -324,7 +330,7 @@ impl From<Response> for AbiResponse {
 /// The inner payload returned by every ABI handler, CBOR-encoded inside `HostAbiResponse.payload`.
 ///
 /// - `result` carries raw bytes:
-///   - for execute/instantiate/external_event: a CBOR-encoded `AbiResponse`
+///   - for execute/instantiate/register/ingest: a CBOR-encoded `AbiResponse`
 ///   - for query: the raw bytes from cosmwasm `Binary` (JSON-encoded by `to_json_binary`)
 /// - `mem` is present for state-mutating calls; absent for queries.
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -338,6 +344,52 @@ pub struct AbiResultPayload {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    mod macro_exports {
+        use super::super::HostAbiError;
+
+        fn passthrough_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
+            Ok(input.to_vec())
+        }
+
+        crate::ownable_host_abi_v1!(
+            instantiate = passthrough_handler,
+            execute = passthrough_handler,
+            query = passthrough_handler,
+            register = passthrough_handler,
+            ingest = passthrough_handler,
+        );
+
+        #[test]
+        fn register_export_is_generated() {
+            let export: extern "C" fn(u32, u32) -> u64 = ownable_register;
+            let _ = export;
+        }
+
+        #[test]
+        fn ingest_export_is_generated() {
+            let export: extern "C" fn(u32, u32) -> u64 = ownable_ingest;
+            let _ = export;
+        }
+    }
+
+    #[test]
+    fn dispatch_response_supports_register_style_handlers() {
+        let response = dispatch_response::<HostAbiError, _>(Ok(b"register".to_vec()), |input| {
+            Ok(input.to_vec())
+        });
+        assert!(response.success);
+        assert_eq!(response.payload, b"register");
+    }
+
+    #[test]
+    fn dispatch_response_supports_ingest_style_handlers() {
+        let response = dispatch_response::<HostAbiError, _>(Ok(b"ingest".to_vec()), |input| {
+            Ok(input.to_vec())
+        });
+        assert!(response.success);
+        assert_eq!(response.payload, b"ingest");
+    }
 
     #[test]
     fn pack_unpack_round_trip() {
