@@ -6,6 +6,7 @@ It provides:
 - common types/utilities used by Ownables contracts
 - optional message-shaping proc macros (`ownable-std-macros`)
 - a stable Host ABI v1 for wasm runtime calls that does not depend on `wasm-bindgen` JS glue compatibility
+- split external-event types and helpers for public events and cross-ownable events
 
 ## Install
 
@@ -37,7 +38,8 @@ Stable exports:
 - `ownable_instantiate(ptr: u32, len: u32) -> u64`
 - `ownable_execute(ptr: u32, len: u32) -> u64`
 - `ownable_query(ptr: u32, len: u32) -> u64`
-- `ownable_external_event(ptr: u32, len: u32) -> u64`
+- `ownable_register(ptr: u32, len: u32) -> u64`
+- `ownable_ingest(ptr: u32, len: u32) -> u64`
 
 Return strategy:
 - entrypoints return packed `u64`
@@ -50,11 +52,14 @@ Wire format:
 
 ### Request Schemas (Per Call)
 
-At the ABI transport layer, all four calls use the same schema:
+At the ABI transport layer, three calls use contract-defined CBOR payloads:
 - `instantiate`: CBOR document bytes
 - `execute`: CBOR document bytes
 - `query`: CBOR document bytes
-- `external_event`: CBOR document bytes
+
+`register` uses a standardized CBOR-encoded `ownable_std::register::PublicEvent` payload.
+
+`ingest` uses a standardized CBOR-encoded `ownable_std::ingest::OwnableEvent` payload.
 
 Required ABI-level keys:
 - none (the full request shape is contract-defined)
@@ -106,16 +111,57 @@ fn query_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
     serde_cbor::to_vec(&v).map_err(HostAbiError::from)
 }
 
-fn external_event_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
-    let v: serde_cbor::Value = serde_cbor::from_slice(input)?;
-    serde_cbor::to_vec(&v).map_err(HostAbiError::from)
+fn register_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
+    let event: ownable_std::register::PublicEvent = ownable_std::abi::cbor_from_slice(input)?;
+    let response = match event.event_type.as_str() {
+        "consume" => {
+            type ConsumeEvent = alloy_sol_types::sol!((address consumer, uint256 amount));
+            let (_consumer, _amount) =
+                ownable_std::register::decode_abi_for::<ConsumeEvent>(&event, "consume")?;
+            ownable_std::abi::AbiResponse {
+                attributes: vec![],
+                events: vec![],
+            }
+        }
+        other => {
+            return Err(HostAbiError::new(format!(
+                "unsupported public event type: {other}"
+            )));
+        }
+    };
+
+    ownable_std::abi::cbor_to_vec(&response).map_err(HostAbiError::from)
+}
+
+fn ingest_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
+    let event: ownable_std::ingest::OwnableEvent =
+        ownable_std::abi::cbor_from_slice(input)?;
+    ownable_std::ingest::require_ownable_event_type(&event, "consume")
+        .map_err(HostAbiError::from_display)?;
+
+    let amount = event
+        .attributes
+        .get("amount")
+        .and_then(|value| value.as_u64())
+        .ok_or_else(|| HostAbiError::new("missing amount attribute"))?;
+
+    let response = ownable_std::abi::AbiResponse {
+        attributes: vec![ownable_std::abi::AbiAttribute {
+            key: "amount".to_string(),
+            value: amount.to_string(),
+        }],
+        events: vec![],
+    };
+
+    ownable_std::abi::cbor_to_vec(&response).map_err(HostAbiError::from)
 }
 
 ownable_host_abi_v1!(
     instantiate = instantiate_handler,
     execute = execute_handler,
     query = query_handler,
-    external_event = external_event_handler,
+    register = register_handler,
+    ingest = ingest_handler,
 );
 ```
 
@@ -129,7 +175,7 @@ where
 
 ## Host Runtime Call Flow
 
-For each call (`instantiate`, `execute`, `query`, `external_event`):
+For each call (`instantiate`, `execute`, `query`, `register`, `ingest`):
 1. Serialize request object to CBOR bytes.
 2. Call `ownable_alloc(len)`.
 3. Write bytes into wasm memory at the returned pointer.
@@ -212,6 +258,7 @@ Expected output envelope bytes decode to the same payload bytes.
 
 - `MemoryStorage`: in-memory storage implementation for testing/off-chain execution
 - `create_env` / `create_ownable_env`: env builders
+- `register` / `ingest`: public and cross-ownable event transport types plus helpers
 - `package_title_from_name`, color helpers, metadata/shared message structs
 - `ownable-std-macros`: attribute macros to extend execute/query/instantiate messages
 
