@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/eqty-dao/ownable-std/compare/ownable-std-v0.6.1...ownable-std-v0.7.0) - 2026-05-17
+
+### Added
+
+- split external event ABI into register and ingest
+
+### Other
+
+- reorganize ownable-std module layout
+- Add public event ABI helpers
+
 ## [0.6.1](https://github.com/eqty-dao/ownable-std/compare/ownable-std-v0.6.0...ownable-std-v0.6.1) - 2026-04-01
 
 ### Fixed
