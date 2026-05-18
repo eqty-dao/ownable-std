@@ -16,7 +16,8 @@ pub use metadata::{
 };
 pub use ownership::{ensure_owner, InfoResponse, OwnableInfo, OwnerAddress};
 pub use register::{
-    decode_abi, decode_abi_for, encode_abi, require_event_type, PublicEvent, PublicEventError,
+    decode_abi, decode_abi_for, encode_abi, require_event_type, EncodePublicEventRequest,
+    PublicEvent, PublicEventError,
 };
 pub use storage::{
     load_owned_deps, EmptyApi, EmptyQuerier, IdbStateDump, IdbStorage, MemoryStorage,

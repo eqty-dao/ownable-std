@@ -40,6 +40,7 @@ Stable exports:
 - `ownable_query(ptr: u32, len: u32) -> u64`
 - `ownable_register(ptr: u32, len: u32) -> u64`
 - `ownable_ingest(ptr: u32, len: u32) -> u64`
+- `ownable_encode_public_event(ptr: u32, len: u32) -> u64`
 
 Return strategy:
 - entrypoints return packed `u64`
@@ -60,6 +61,9 @@ At the ABI transport layer, three calls use contract-defined CBOR payloads:
 `register` uses a standardized CBOR-encoded `ownable_std::register::PublicEvent` payload.
 
 `ingest` uses a standardized CBOR-encoded `ownable_std::ingest::OwnableEvent` payload.
+
+`encode_public_event` uses a standardized CBOR-encoded
+`ownable_std::register::EncodePublicEventRequest` payload and returns raw ABI bytes.
 
 Required ABI-level keys:
 - none (the full request shape is contract-defined)
@@ -156,12 +160,40 @@ fn ingest_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
     ownable_std::abi::cbor_to_vec(&response).map_err(HostAbiError::from)
 }
 
+fn encode_public_event_handler(input: &[u8]) -> Result<Vec<u8>, HostAbiError> {
+    let request: ownable_std::register::EncodePublicEventRequest =
+        ownable_std::abi::cbor_from_slice(input)?;
+
+    match request.event_type.as_str() {
+        "consume" => {
+            #[derive(serde::Deserialize)]
+            struct ConsumePayload {
+                amount: u32,
+                active: bool,
+            }
+
+            type ConsumeEvent = alloy_sol_types::sol!((uint32, bool));
+
+            let payload: ConsumePayload =
+                ownable_std::abi::cbor_from_slice(request.data.as_slice())?;
+            Ok(ownable_std::register::encode_abi::<ConsumeEvent>(&(
+                payload.amount,
+                payload.active,
+            )))
+        }
+        other => Err(HostAbiError::new(format!(
+            "unsupported public event type: {other}"
+        ))),
+    }
+}
+
 ownable_host_abi_v1!(
     instantiate = instantiate_handler,
     execute = execute_handler,
     query = query_handler,
     register = register_handler,
     ingest = ingest_handler,
+    encode_public_event = encode_public_event_handler,
 );
 ```
 
@@ -175,7 +207,7 @@ where
 
 ## Host Runtime Call Flow
 
-For each call (`instantiate`, `execute`, `query`, `register`, `ingest`):
+For each call (`instantiate`, `execute`, `query`, `register`, `ingest`, `encode_public_event`):
 1. Serialize request object to CBOR bytes.
 2. Call `ownable_alloc(len)`.
 3. Write bytes into wasm memory at the returned pointer.
@@ -259,6 +291,7 @@ Expected output envelope bytes decode to the same payload bytes.
 - `MemoryStorage`: in-memory storage implementation for testing/off-chain execution
 - `create_env` / `create_ownable_env`: env builders
 - `register` / `ingest`: public and cross-ownable event transport types plus helpers
+- `EncodePublicEventRequest`: JS-to-wasm request payload for public-event ABI encoding
 - `package_title_from_name`, color helpers, metadata/shared message structs
 - `ownable-std-macros`: attribute macros to extend execute/query/instantiate messages
 

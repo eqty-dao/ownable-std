@@ -233,7 +233,8 @@ macro_rules! ownable_host_abi_v1 {
         execute = $execute:path,
         query = $query:path,
         register = $register:path,
-        ingest = $ingest:path $(,)?
+        ingest = $ingest:path,
+        encode_public_event = $encode_public_event:path $(,)?
     ) => {
         #[unsafe(no_mangle)]
         pub extern "C" fn ownable_alloc(len: u32) -> u32 {
@@ -269,6 +270,11 @@ macro_rules! ownable_host_abi_v1 {
         #[unsafe(no_mangle)]
         pub extern "C" fn ownable_ingest(ptr: u32, len: u32) -> u64 {
             $crate::abi::dispatch(ptr, len, $ingest)
+        }
+
+        #[unsafe(no_mangle)]
+        pub extern "C" fn ownable_encode_public_event(ptr: u32, len: u32) -> u64 {
+            $crate::abi::dispatch(ptr, len, $encode_public_event)
         }
     };
 }
@@ -331,6 +337,7 @@ impl From<Response> for AbiResponse {
 ///
 /// - `result` carries raw bytes:
 ///   - for execute/instantiate/register/ingest: a CBOR-encoded `AbiResponse`
+///   - for encode_public_event: raw ABI bytes
 ///   - for query: the raw bytes from cosmwasm `Binary` (JSON-encoded by `to_json_binary`)
 /// - `mem` is present for state-mutating calls; absent for queries.
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -358,6 +365,7 @@ mod tests {
             query = passthrough_handler,
             register = passthrough_handler,
             ingest = passthrough_handler,
+            encode_public_event = passthrough_handler,
         );
 
         #[test]
@@ -369,6 +377,12 @@ mod tests {
         #[test]
         fn ingest_export_is_generated() {
             let export: extern "C" fn(u32, u32) -> u64 = ownable_ingest;
+            let _ = export;
+        }
+
+        #[test]
+        fn encode_public_event_export_is_generated() {
+            let export: extern "C" fn(u32, u32) -> u64 = ownable_encode_public_event;
             let _ = export;
         }
     }
@@ -389,6 +403,14 @@ mod tests {
         });
         assert!(response.success);
         assert_eq!(response.payload, b"ingest");
+    }
+
+    #[test]
+    fn dispatch_response_supports_encode_public_event_style_handlers() {
+        let response =
+            dispatch_response::<HostAbiError, _>(Ok(b"encode".to_vec()), |input| Ok(input.to_vec()));
+        assert!(response.success);
+        assert_eq!(response.payload, b"encode");
     }
 
     #[test]

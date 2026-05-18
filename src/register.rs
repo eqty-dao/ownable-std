@@ -18,6 +18,14 @@ pub struct PublicEvent {
     pub log_index: u32,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+/// Request payload for JS-driven public-event ABI encoding.
+pub struct EncodePublicEventRequest {
+    pub event_type: String,
+    pub data: Binary,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PublicEventError {
     UnexpectedEventType {
@@ -97,6 +105,20 @@ mod tests {
             crate::abi::cbor_from_slice(&encoded).expect("deserialize public event");
 
         assert_eq!(decoded, event);
+    }
+
+    #[test]
+    fn encode_public_event_request_cbor_round_trip_preserves_fields() {
+        let request = EncodePublicEventRequest {
+            event_type: "consume".to_string(),
+            data: Binary::from(vec![0xa1, 0x66, b'a', b'm', b'o', b'u', b'n', b't']),
+        };
+
+        let encoded = crate::abi::cbor_to_vec(&request).expect("serialize encode request");
+        let decoded: EncodePublicEventRequest =
+            crate::abi::cbor_from_slice(&encoded).expect("deserialize encode request");
+
+        assert_eq!(decoded, request);
     }
 
     #[test]
