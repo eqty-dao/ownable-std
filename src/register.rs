@@ -63,6 +63,10 @@ pub fn decode_abi<T: SolType>(data: &[u8]) -> Result<T::RustType, PublicEventErr
     T::abi_decode(data, true).map_err(|err| PublicEventError::AbiDecode(err.to_string()))
 }
 
+pub fn encode_abi<T: SolType>(value: &T::RustType) -> Vec<u8> {
+    T::abi_encode(value)
+}
+
 pub fn decode_abi_for<T: SolType>(
     event: &PublicEvent,
     expected_event_type: &'static str,
@@ -74,7 +78,7 @@ pub fn decode_abi_for<T: SolType>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_sol_types::{sol, SolValue};
+    use alloy_sol_types::sol;
 
     #[test]
     fn public_event_cbor_round_trip_preserves_binary_fields() {
@@ -136,10 +140,21 @@ mod tests {
         type ConsumeEvent = sol!((uint32,bool));
 
         let expected = (123u32, true);
-        let encoded = expected.abi_encode();
+        let encoded = encode_abi::<ConsumeEvent>(&expected);
 
         let decoded: <ConsumeEvent as SolType>::RustType =
             decode_abi::<ConsumeEvent>(&encoded).expect("decode payload");
+
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn encode_abi_round_trips_through_decode() {
+        type ConsumeEvent = sol!((uint32,bool));
+
+        let expected = (456u32, false);
+        let encoded = encode_abi::<ConsumeEvent>(&expected);
+        let decoded = decode_abi::<ConsumeEvent>(&encoded).expect("decode encoded payload");
 
         assert_eq!(decoded, expected);
     }
