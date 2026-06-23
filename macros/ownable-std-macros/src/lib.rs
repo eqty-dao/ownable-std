@@ -79,12 +79,9 @@ fn ownables_query_closed_impl(input: proc_macro2::TokenStream) -> proc_macro2::T
     .into()
 }
 
-/// Adds `Transfer { to: Addr }` to an `ExecuteMsg` enum.
-#[proc_macro_attribute]
-pub fn ownables_transfer(metadata: TokenStream, input: TokenStream) -> TokenStream {
-    parse_macro_input!(metadata as Nothing);
+fn ownables_transfer_impl(input: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
     extend_enum_with_variants_impl(
-        input.into(),
+        input,
         quote! {
             enum ExecuteMsg {
                 Transfer {to: Addr},
@@ -92,6 +89,82 @@ pub fn ownables_transfer(metadata: TokenStream, input: TokenStream) -> TokenStre
         },
     )
     .into()
+}
+
+fn ownables_query_info_impl(input: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+    extend_enum_with_variants_impl(
+        input,
+        quote! {
+            enum QueryMsg {
+                GetInfo {},
+            }
+        },
+    )
+    .into()
+}
+
+fn ownables_query_consumed_impl(input: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+    extend_enum_with_variants_impl(
+        input,
+        quote! {
+            enum QueryMsg {
+                IsConsumed {},
+            }
+        },
+    )
+    .into()
+}
+
+fn ownables_query_consumer_of_impl(input: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+    extend_enum_with_variants_impl(
+        input,
+        quote! {
+            enum QueryMsg {
+                IsConsumerOf {
+                    issuer: Addr,
+                    consumable_type: String,
+                },
+            }
+        },
+    )
+    .into()
+}
+
+fn ownables_instantiate_msg_impl(input: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+    let default_instantiate_fields = quote! {
+        struct InstantiateMsg {
+            pub ownable_id: String,
+            pub package: String,
+            pub nft: Option<NFT>,
+            pub ownable_type: Option<String>,
+            pub network_id: u32,
+        }
+    };
+
+    let default_ast: DeriveInput = syn::parse2(default_instantiate_fields).expect("parse default struct");
+    let default_fields = match default_ast.data {
+        Struct(DataStruct { fields, .. }) => fields,
+        _ => panic!("only structs can accept fields"),
+    };
+
+    let mut input_ast: DeriveInput = syn::parse2(input).expect("parse input struct");
+    let input_fields_data = match &mut input_ast.data {
+        Struct(DataStruct { fields, .. }) => fields,
+        _ => panic!("only structs can accept fields"),
+    };
+
+    if let syn::Fields::Named(FieldsNamed { named, .. }) = input_fields_data {
+        named.extend(default_fields);
+    }
+
+    quote! { #input_ast }
+}
+
+/// Adds `Transfer { to: Addr }` to an `ExecuteMsg` enum.
+#[proc_macro_attribute]
+pub fn ownables_transfer(metadata: TokenStream, input: TokenStream) -> TokenStream {
+    parse_macro_input!(metadata as Nothing);
+    ownables_transfer_impl(input.into()).into()
 }
 
 /// Adds `Lock {}` to an `ExecuteMsg` enum.
@@ -157,15 +230,7 @@ pub fn ownables_query_metadata(metadata: TokenStream, input: TokenStream) -> Tok
 #[proc_macro_attribute]
 pub fn ownables_query_info(metadata: TokenStream, input: TokenStream) -> TokenStream {
     parse_macro_input!(metadata as Nothing);
-    extend_enum_with_variants_impl(
-        input.into(),
-        quote! {
-            enum QueryMsg {
-                GetInfo {},
-            }
-        },
-    )
-    .into()
+    ownables_query_info_impl(input.into()).into()
 }
 
 /// Adds `GetWidgetState {}` to a `QueryMsg` enum.
@@ -202,15 +267,7 @@ pub fn ownables_query_locked(metadata: TokenStream, input: TokenStream) -> Token
 #[proc_macro_attribute]
 pub fn ownables_query_consumed(metadata: TokenStream, input: TokenStream) -> TokenStream {
     parse_macro_input!(metadata as Nothing);
-    extend_enum_with_variants_impl(
-        input.into(),
-        quote! {
-            enum QueryMsg {
-                IsConsumed {},
-            }
-        },
-    )
-    .into()
+    ownables_query_consumed_impl(input.into()).into()
 }
 
 /// Adds `GetAttachments {}` to a `QueryMsg` enum.
@@ -231,18 +288,7 @@ pub fn ownables_query_closed(metadata: TokenStream, input: TokenStream) -> Token
 #[proc_macro_attribute]
 pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> TokenStream {
     parse_macro_input!(metadata as Nothing);
-    extend_enum_with_variants_impl(
-        input.into(),
-        quote! {
-            enum QueryMsg {
-                IsConsumerOf {
-                    issuer: Addr,
-                    consumable_type: String,
-                },
-            }
-        },
-    )
-    .into()
+    ownables_query_consumer_of_impl(input.into()).into()
 }
 
 /// Adds default ownables fields to an `InstantiateMsg` struct:
@@ -256,35 +302,7 @@ pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> 
 #[proc_macro_attribute]
 pub fn ownables_instantiate_msg(metadata: TokenStream, input: TokenStream) -> TokenStream {
     parse_macro_input!(metadata as Nothing);
-
-    let default_instantiate_fields: TokenStream = quote! {
-        struct InstantiateMsg {
-            pub ownable_id: String,
-            pub package: String,
-            pub nft: Option<NFT>,
-            pub ownable_type: Option<String>,
-            pub network_id: u32,
-        }
-    }
-    .into();
-
-    let default_ast: DeriveInput = parse_macro_input!(default_instantiate_fields);
-    let default_fields = match default_ast.data {
-        Struct(DataStruct { fields, .. }) => fields,
-        _ => panic!("only structs can accept fields"),
-    };
-
-    let mut input_ast: DeriveInput = parse_macro_input!(input);
-    let input_fields_data = match &mut input_ast.data {
-        Struct(DataStruct { fields, .. }) => fields,
-        _ => panic!("only structs can accept fields"),
-    };
-
-    if let syn::Fields::Named(FieldsNamed { named, .. }) = input_fields_data {
-        named.extend(default_fields);
-    }
-
-    quote! { #input_ast }.into()
+    ownables_instantiate_msg_impl(input.into()).into()
 }
 
 #[cfg(test)]
@@ -306,6 +324,14 @@ mod tests {
             .iter()
             .find(|variant| variant.ident == name)
             .unwrap_or_else(|| panic!("missing variant {name}"))
+    }
+
+    fn parse_struct(input: proc_macro2::TokenStream) -> syn::DataStruct {
+        let parsed: DeriveInput = syn::parse2(input).expect("parse struct");
+        match parsed.data {
+            Data::Struct(data) => data,
+            _ => panic!("expected struct"),
+        }
     }
 
     #[test]
@@ -373,6 +399,116 @@ mod tests {
         match &variant.fields {
             Fields::Named(fields) => assert!(fields.named.is_empty()),
             _ => panic!("IsClosed should use named fields"),
+        }
+    }
+
+    #[test]
+    fn ownables_transfer_still_injects_addr_field() {
+        let data = parse_enum(ownables_transfer_impl(quote! {
+            enum ExecuteMsg {
+                Existing {},
+            }
+        }));
+        let variant = find_variant(&data, "Transfer");
+
+        match &variant.fields {
+            Fields::Named(fields) => {
+                assert_eq!(fields.named.len(), 1);
+                let field = &fields.named[0];
+                assert_eq!(field.ident.as_ref().expect("named field"), "to");
+                assert_eq!(field.ty.to_token_stream().to_string(), "Addr");
+            }
+            _ => panic!("Transfer should have named fields"),
+        }
+    }
+
+    #[test]
+    fn ownables_query_info_still_injects_get_info_variant() {
+        let data = parse_enum(ownables_query_info_impl(quote! {
+            enum QueryMsg {
+                Existing {},
+            }
+        }));
+        let variant = find_variant(&data, "GetInfo");
+
+        match &variant.fields {
+            Fields::Named(fields) => assert!(fields.named.is_empty()),
+            _ => panic!("GetInfo should use named fields"),
+        }
+    }
+
+    #[test]
+    fn ownables_query_consumed_still_injects_is_consumed_variant() {
+        let data = parse_enum(ownables_query_consumed_impl(quote! {
+            enum QueryMsg {
+                Existing {},
+            }
+        }));
+        let variant = find_variant(&data, "IsConsumed");
+
+        match &variant.fields {
+            Fields::Named(fields) => assert!(fields.named.is_empty()),
+            _ => panic!("IsConsumed should use named fields"),
+        }
+    }
+
+    #[test]
+    fn ownables_query_consumer_of_still_injects_expected_fields() {
+        let data = parse_enum(ownables_query_consumer_of_impl(quote! {
+            enum QueryMsg {
+                Existing {},
+            }
+        }));
+        let variant = find_variant(&data, "IsConsumerOf");
+
+        match &variant.fields {
+            Fields::Named(fields) => {
+                assert_eq!(fields.named.len(), 2);
+                assert_eq!(fields.named[0].ident.as_ref().expect("issuer"), "issuer");
+                assert_eq!(
+                    fields.named[0].ty.to_token_stream().to_string(),
+                    "Addr"
+                );
+                assert_eq!(
+                    fields.named[1].ident.as_ref().expect("consumable_type"),
+                    "consumable_type"
+                );
+                assert_eq!(
+                    fields.named[1].ty.to_token_stream().to_string(),
+                    "String"
+                );
+            }
+            _ => panic!("IsConsumerOf should use named fields"),
+        }
+    }
+
+    #[test]
+    fn ownables_instantiate_msg_still_injects_standard_fields() {
+        let data = parse_struct(ownables_instantiate_msg_impl(quote! {
+            struct InstantiateMsg {
+                pub name: String,
+            }
+        }));
+
+        match data.fields {
+            Fields::Named(fields) => {
+                let names: Vec<String> = fields
+                    .named
+                    .iter()
+                    .map(|field| field.ident.as_ref().expect("named field").to_string())
+                    .collect();
+                for required in [
+                    "name",
+                    "ownable_id",
+                    "ownable_type",
+                    "network_id",
+                    "package",
+                    "nft",
+                ] {
+                    assert!(names.iter().any(|name| name == required), "missing {required}");
+                }
+            }
+            _ => panic!("InstantiateMsg should use named fields"),
         }
     }
 }
