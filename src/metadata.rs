@@ -1,4 +1,3 @@
-use cosmwasm_std::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -52,7 +51,7 @@ pub fn rgb_hex(r: u8, g: u8, b: u8) -> String {
 
 // from github.com/CosmWasm/cw-nfts/blob/main/contracts/cw721-metadata-onchain
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug, Default)]
-/// Standard NFT metadata object.
+/// Standard Ownable display metadata object.
 pub struct Metadata {
     pub image: Option<String>,
     pub image_data: Option<String>,
@@ -62,15 +61,6 @@ pub struct Metadata {
     pub background_color: Option<String>,
     pub animation_url: Option<String>,
     pub youtube_url: Option<String>,
-}
-
-/// NFT reference used by ownables.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct NFT {
-    pub network: String,
-    pub id: Uint128,
-    pub address: String,
-    pub lock_service: Option<String>,
 }
 
 #[cfg(test)]

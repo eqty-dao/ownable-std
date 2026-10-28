@@ -13,7 +13,7 @@ pub use ingest::{
     OwnableEvent, OwnableEventError, OwnableEventSource, require_ownable_event_type, source_matches,
 };
 pub use metadata::{
-    Metadata, NFT, derive_rgb_values, get_random_color, package_title_from_name, rgb_hex,
+    Metadata, derive_rgb_values, get_random_color, package_title_from_name, rgb_hex,
 };
 pub use ownership::{InfoResponse, OwnableInfo, OwnerAddress, ensure_owner};
 pub use register::{
