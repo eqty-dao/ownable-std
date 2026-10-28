@@ -135,7 +135,6 @@ fn ownables_instantiate_msg_impl(input: proc_macro2::TokenStream) -> proc_macro2
         struct InstantiateMsg {
             pub ownable_id: String,
             pub package: String,
-            pub nft: Option<NFT>,
             pub ownable_type: Option<String>,
             pub network_id: u32,
         }
@@ -295,9 +294,8 @@ pub fn ownables_query_consumer_of(metadata: TokenStream, input: TokenStream) -> 
 /// InstantiateMsg {
 ///     pub ownable_id: String,
 ///     pub package: String,
-///     pub nft: Option<NFT>,
 ///     pub ownable_type: Option<String>,
-///     pub network_id: u8,
+///     pub network_id: u32,
 /// }
 #[proc_macro_attribute]
 pub fn ownables_instantiate_msg(metadata: TokenStream, input: TokenStream) -> TokenStream {
@@ -486,7 +484,7 @@ mod tests {
     fn ownables_instantiate_msg_still_injects_standard_fields() {
         let data = parse_struct(ownables_instantiate_msg_impl(quote! {
             struct InstantiateMsg {
-                pub name: String,
+                pub caller: String,
             }
         }));
 
@@ -497,16 +495,10 @@ mod tests {
                     .iter()
                     .map(|field| field.ident.as_ref().expect("named field").to_string())
                     .collect();
-                for required in [
-                    "name",
-                    "ownable_id",
-                    "ownable_type",
-                    "network_id",
-                    "package",
-                    "nft",
-                ] {
-                    assert!(names.iter().any(|name| name == required), "missing {required}");
-                }
+                assert_eq!(
+                    names,
+                    ["caller", "ownable_id", "package", "ownable_type", "network_id"]
+                );
             }
             _ => panic!("InstantiateMsg should use named fields"),
         }

@@ -15,7 +15,6 @@ pub struct OwnableInfo {
 pub struct InfoResponse {
     pub owner: Addr,
     pub issuer: Addr,
-    pub nft: Option<crate::metadata::NFT>,
     pub ownable_type: Option<String>,
 }
 
@@ -89,5 +88,24 @@ mod tests {
             TestError::Unauthorized("forbidden")
         });
         assert_eq!(result, Ok(()));
+    }
+
+    #[test]
+    fn info_response_serializes_only_supported_fields() {
+        let response = InfoResponse {
+            owner: Addr::unchecked("owner"),
+            issuer: Addr::unchecked("issuer"),
+            ownable_type: Some("basic".to_string()),
+        };
+
+        let value = serde_json::to_value(response).expect("serialize info response");
+        let object = value.as_object().expect("info response object");
+        assert_eq!(object.len(), 3);
+        assert_eq!(object.get("owner").and_then(|value| value.as_str()), Some("owner"));
+        assert_eq!(object.get("issuer").and_then(|value| value.as_str()), Some("issuer"));
+        assert_eq!(
+            object.get("ownable_type").and_then(|value| value.as_str()),
+            Some("basic")
+        );
     }
 }
