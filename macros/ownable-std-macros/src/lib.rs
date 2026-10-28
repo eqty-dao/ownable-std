@@ -497,7 +497,13 @@ mod tests {
                     .collect();
                 assert_eq!(
                     names,
-                    ["caller", "ownable_id", "package", "ownable_type", "network_id"]
+                    [
+                        "caller",
+                        "ownable_id",
+                        "package",
+                        "ownable_type",
+                        "network_id"
+                    ]
                 );
             }
             _ => panic!("InstantiateMsg should use named fields"),

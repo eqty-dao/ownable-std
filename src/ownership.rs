@@ -101,8 +101,14 @@ mod tests {
         let value = serde_json::to_value(response).expect("serialize info response");
         let object = value.as_object().expect("info response object");
         assert_eq!(object.len(), 3);
-        assert_eq!(object.get("owner").and_then(|value| value.as_str()), Some("owner"));
-        assert_eq!(object.get("issuer").and_then(|value| value.as_str()), Some("issuer"));
+        assert_eq!(
+            object.get("owner").and_then(|value| value.as_str()),
+            Some("owner")
+        );
+        assert_eq!(
+            object.get("issuer").and_then(|value| value.as_str()),
+            Some("issuer")
+        );
         assert_eq!(
             object.get("ownable_type").and_then(|value| value.as_str()),
             Some("basic")
