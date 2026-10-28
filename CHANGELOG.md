@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0](https://github.com/eqty-dao/ownable-std/compare/ownable-std-v0.9.0...ownable-std-v0.10.0) - 2026-10-28
+
+### Added
+
+- [**breaking**] remove NFT identity from shared types
+
 ## [0.9.0](https://github.com/eqty-dao/ownable-std/compare/ownable-std-v0.8.0...ownable-std-v0.9.0) - 2026-06-28
 
 ### Added
