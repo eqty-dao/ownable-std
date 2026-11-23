@@ -181,7 +181,8 @@ pub fn ownables_lock(metadata: TokenStream, input: TokenStream) -> TokenStream {
     .into()
 }
 
-/// Adds `Consume {}` to an `ExecuteMsg` enum.
+/// Adds `Consume { consumer_id: Option<String> }` to an `ExecuteMsg` enum.
+/// Historical consume messages without a destination still deserialize for replay.
 #[proc_macro_attribute]
 pub fn ownables_consume(metadata: TokenStream, input: TokenStream) -> TokenStream {
     parse_macro_input!(metadata as Nothing);
@@ -189,7 +190,10 @@ pub fn ownables_consume(metadata: TokenStream, input: TokenStream) -> TokenStrea
         input.into(),
         quote! {
             enum ExecuteMsg {
-                Consume {},
+                Consume {
+                    #[serde(default, skip_serializing_if = "Option::is_none")]
+                    consumer_id: Option<String>,
+                },
             }
         },
     )

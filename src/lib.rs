@@ -10,7 +10,8 @@ pub mod storage;
 pub use attachment::{Attachment, AttachmentInput, GetAttachmentsResponse};
 pub use env::{create_env, create_ownable_env};
 pub use ingest::{
-    OwnableEvent, OwnableEventError, OwnableEventSource, require_ownable_event_type, source_matches,
+    OwnableEvent, OwnableEventError, OwnableEventSource, OwnableEventTarget,
+    require_ownable_event_type, source_matches,
 };
 pub use metadata::{
     Metadata, derive_rgb_values, get_random_color, package_title_from_name, rgb_hex,
