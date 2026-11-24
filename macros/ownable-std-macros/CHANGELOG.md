@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0](https://github.com/eqty-dao/ownable-std/compare/ownable-std-macros-v0.10.0...ownable-std-macros-v0.11.0) - 2026-11-24
+
+### Added
+
+- support bound consumption messages and ingest metadata
+
 ## [0.10.0](https://github.com/eqty-dao/ownable-std/compare/ownable-std-macros-v0.9.0...ownable-std-macros-v0.10.0) - 2026-10-28
 
 ### Added
